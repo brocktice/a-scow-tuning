@@ -566,7 +566,8 @@ function collectLogForm() {
     },
     perSide: {
       uppers: { port: $("#upPort").value.trim(), stbd: $("#upStbd").value.trim() },
-      lowers: { port: $("#loPort").value.trim(), stbd: $("#loStbd").value.trim() }
+      lowers: { port: $("#loPort").value.trim(), stbd: $("#loStbd").value.trim() },
+      intermediates: { port: $("#diaPort").value.trim(), stbd: $("#diaStbd").value.trim() }
     },
     performance: $("#logPerf").value.trim(),
     adjustments: $("#logAdj").value.trim(),
@@ -625,6 +626,8 @@ function editLog(id) {
   $("#upStbd").value = ps.uppers?.stbd || "";
   $("#loPort").value = ps.lowers?.port || "";
   $("#loStbd").value = ps.lowers?.stbd || "";
+  $("#diaPort").value = ps.intermediates?.port || "";
+  $("#diaStbd").value = ps.intermediates?.stbd || "";
   $("#logPerf").value = l.performance || "";
   $("#logAdj").value = l.adjustments || "";
   $("#logNotes").value = l.notes || "";
@@ -663,8 +666,13 @@ function settingsSummary(s) {
 function perSideSummary(ps) {
   if (!ps) return "";
   const out = [];
-  if (ps.uppers && (ps.uppers.port || ps.uppers.stbd)) out.push(`Uppers P/S ${ps.uppers.port || "?"}/${ps.uppers.stbd || "?"}`);
-  if (ps.lowers && (ps.lowers.port || ps.lowers.stbd)) out.push(`Lowers P/S ${ps.lowers.port || "?"}/${ps.lowers.stbd || "?"}`);
+  const add = (key, label) => {
+    const w = ps[key];
+    if (w && (w.port || w.stbd)) out.push(`${label} P/S ${w.port || "?"}/${w.stbd || "?"}`);
+  };
+  add("uppers", "Uppers");
+  add("lowers", "Lowers");
+  add("intermediates", "Diamonds");
   return out.join(" · ");
 }
 
