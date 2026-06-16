@@ -43,6 +43,5 @@ sync. No build step.
 - `index.html` / `styles.css` / `app.js` — the front-end
 - `data.js` — seeded reference data from `rig-tuning-data.json`
 - `functions/api/store.js` — Cloudflare Pages Function (storage API, per-user KV)
-- `wrangler.toml` — Pages/KV config
 - `serve_https.py` — local-only dev server (static + shared `store.json`)
 - `DEPLOY.md` — Cloudflare Pages setup
