@@ -15,7 +15,7 @@ sync. No build step.
   crews by email (invite-only, abuse-proof). Each crew's data is isolated.
 
 ## Features
-- **Boat profiles** — multiple boats, each seeded from Louis Hill's reference grid.
+- **Boat profiles** — multiple boats, each seeded from the reference grid.
   New profiles can start from the reference or copy the current boat's config.
 - **Tuning Grid** — editable settings per setup (Andy / Buddy / C4 + your own)
   across wind ranges, including a **Diamond** (pre-bend) row with bend / loos / lbs.
@@ -41,7 +41,7 @@ sync. No build step.
 
 ## Files
 - `index.html` / `styles.css` / `app.js` — the front-end
-- `data.js` — seeded reference data from `rig-tuning-data.json`
+- `data.js` — seeded reference tuning data
 - `functions/api/store.js` — Cloudflare Pages Function (storage API, per-user KV)
 - `serve_https.py` — local-only dev server (static + shared `store.json`)
 - `DEPLOY.md` — Cloudflare Pages setup

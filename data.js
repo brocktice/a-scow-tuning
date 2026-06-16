@@ -1,4 +1,4 @@
-/* Reference tuning data — seeded from rig-tuning-data.json (Louis Hill, Catapult IV, 6/8/08).
+/* Reference tuning data for the A Scow rig.
    New profiles are created by deep-cloning REFERENCE_DATA so the original stays pristine. */
 const REFERENCE_DATA = {
   schema: "rig-tuning/v1",
@@ -6,9 +6,6 @@ const REFERENCE_DATA = {
     boat: "Catapult IV",
     class: "A Scow",
     rig: "swept spreader",
-    source: "Louis Hill",
-    sourceDate: "2008-06-08",
-    transcribedFrom: "photo of Louis Hill's tuning card",
     tensionUnit: "lbf",
     gauge: "Loos Model A",
     lengthUnit: "in",
@@ -30,9 +27,8 @@ const REFERENCE_DATA = {
     {
       id: "lowers-half-uppers",
       expr: "lowers.lbs ~= 0.5 * uppers.lbs",
-      source: "Louis Hill (rule of thumb)",
       severity: "warn",
-      note: "Transcribed data does NOT satisfy this everywhere. Surface violations for the user to re-verify against the original card; do not auto-correct."
+      note: "Rule of thumb: lowers ~= 1/2 uppers. Data does NOT satisfy this everywhere. Surface violations to re-verify; do not auto-correct."
     }
   ],
   windRanges: [
@@ -44,7 +40,7 @@ const REFERENCE_DATA = {
   prebend: {
     wire: "intermediates",
     unit: "in",
-    source: "North Sails A Scow guide (REFERENCE ONLY - replace with Louis's targets)",
+    source: "North Sails A Scow guide (reference — replace with your measured targets)",
     confirmed: false,
     measurement: "string down the back of the tunnel, read at the spar midpoint",
     adjustsWithWind: true,
@@ -54,7 +50,6 @@ const REFERENCE_DATA = {
   hull: {
     asymmetry_in: 0.625,
     higherSide: "starboard",
-    source: "Louis Hill",
     note: "Legacy mold runs ~5/8 in higher to starboard. Tune to a centered masthead; expect uneven port/stbd turnbuckle counts. Tool should support per-side values."
   },
   setups: [
@@ -105,7 +100,7 @@ const REFERENCE_DATA = {
       },
       byWind: {
         "0-6": { uppers: { lbs: 300, loos: 37 }, lowers: { lbs: 200, loos: 32 }, forestay: { in: 15.5 } },
-        "6-12": { uppers: { turns: 3, lbs: 360, loos: 40 }, lowers: { turns: 2, lbs: 360, loos: 40, verify: true, verifyNote: "360 violates lowers~=1/2 uppers; likely a misread (260? 180?). Confirm against original card." }, forestay: { in: 16 } },
+        "6-12": { uppers: { turns: 3, lbs: 360, loos: 40 }, lowers: { turns: 2, lbs: 360, loos: 40, verify: true, verifyNote: "360 violates lowers~=1/2 uppers; likely a misread (260? 180?). Confirm against your source." }, forestay: { in: 16 } },
         "12-18": { uppers: { turns: 5, lbs: 520, loos: 44 }, lowers: { turns: 5, lbs: 520, loos: 44 }, forestay: { in: 16 } },
         "18-25": { uppers: { turns: 11, lbs: 700, loos: 46 }, lowers: { turns: 10, lbs: 700, loos: 46 }, forestay: { in: 17 } }
       },

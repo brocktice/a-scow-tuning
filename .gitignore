@@ -8,3 +8,6 @@ store.json
 node_modules/
 .wrangler/
 .DS_Store
+
+# Cloudflare API token (never commit)
+.cf_token

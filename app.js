@@ -39,6 +39,30 @@ function load() {
 }
 
 // Ensure every profile's config has the nested shapes the UI writes into.
+// Strip personal attribution (names, dates, transcription notes) from a config,
+// keeping the tuning data and public references (e.g. the North Sails guide).
+function scrubAttribution(c) {
+  if (c.meta) { delete c.meta.source; delete c.meta.sourceDate; delete c.meta.transcribedFrom; }
+  if (c.hull) delete c.hull.source;
+  if (Array.isArray(c.validations)) {
+    for (const v of c.validations) {
+      delete v.source;
+      if (v.note) v.note = v.note.replace(/transcribed data/gi, "Data").replace(/\s*against the original card/gi, "");
+    }
+  }
+  if (c.prebend && c.prebend.source) {
+    c.prebend.source = c.prebend.source.replace(/replace with [^)]*targets/gi, "replace with your measured targets");
+  }
+  for (const s of (c.setups || [])) {
+    const cells = [s.base || {}, ...Object.values(s.byWind || {})];
+    for (const cell of cells) {
+      for (const wire of Object.values(cell || {})) {
+        if (wire && wire.verifyNote) wire.verifyNote = wire.verifyNote.replace(/original card/gi, "your source");
+      }
+    }
+  }
+}
+
 function normalizeState(st) {
   if (!st || !Array.isArray(st.profiles)) return seedState();
   for (const p of st.profiles) {
@@ -51,6 +75,7 @@ function normalizeState(st) {
     c.prebend = c.prebend || clone(REFERENCE_DATA.prebend);
     c.prebend.byBand = c.prebend.byBand || {};
     c.globalNotes = c.globalNotes || [];
+    scrubAttribution(c);
     const pb = c.prebend.byBand || {};
     const bandBend = (band) => {
       const v = band === "light" ? pb.light : band === "heavy" ? pb.heavy : pb.allPurpose;
@@ -256,7 +281,7 @@ function newProfile() {
   const name = prompt("Boat name for the new profile:", "");
   if (!name) return;
   const startBlank = state.profiles.length > 0 &&
-    confirm("OK = start from the Louis Hill reference grid.\nCancel = copy the current boat's settings & wind/rig config (log not copied).");
+    confirm("OK = start from the reference grid.\nCancel = copy the current boat's settings & wind/rig config (log not copied).");
   let p;
   if (startBlank) {
     p = makeProfile(name);
@@ -752,11 +777,11 @@ function renderReference() {
   const m = cfg.meta || {};
   const h = cfg.hull || {};
   $("#metaTable").innerHTML = [
-    ["Source", m.source], ["Source date", m.sourceDate], ["Class", m.class], ["Rig", m.rig], ["Gauge", m.gauge],
+    ["Class", m.class], ["Rig", m.rig], ["Gauge", m.gauge],
     ["Uppers", cfg.terminology?.uppers], ["Lowers", cfg.terminology?.lowers],
     ["Pre-bend / diamond", cfg.terminology?.intermediates], ["Forestay", cfg.terminology?.forestay],
     ["Hull asymmetry", h.asymmetry_in != null ? `${h.asymmetry_in} in higher to ${h.higherSide}` : null],
-    ["Pre-bend status", cfg.prebend && !cfg.prebend.confirmed ? `Unconfirmed — seeded from ${cfg.prebend.source || "reference"}; replace with measured values` : null]
+    ["Pre-bend status", cfg.prebend && !cfg.prebend.confirmed ? "Unconfirmed — replace with your measured values" : null]
   ].filter(([, v]) => v).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join("");
   $("#globalNotes").innerHTML = (cfg.globalNotes || []).map((n) => `<li>${esc(n)}</li>`).join("");
 }
