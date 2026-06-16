@@ -1,0 +1,13 @@
+name = "a-scow-tuning"
+compatibility_date = "2024-09-01"
+pages_build_output_dir = "."
+
+# KV storage for the tuning data. Easiest path is to bind it in the dashboard:
+#   Pages project -> Settings -> Functions -> KV namespace bindings
+#   Variable name: STORE   ->   select your namespace
+#
+# Or manage it here instead: create the namespace, then uncomment and fill the id:
+#
+# [[kv_namespaces]]
+# binding = "STORE"
+# id = "REPLACE_WITH_KV_NAMESPACE_ID"

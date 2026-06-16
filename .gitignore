@@ -1,0 +1,10 @@
+# local dev server artifacts (not used in production)
+cert.pem
+key.pem
+store.json
+*.tmp
+
+# tooling
+node_modules/
+.wrangler/
+.DS_Store

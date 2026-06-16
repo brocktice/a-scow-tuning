@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>A Scow Rig Tuning</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app">
+    <h1>⛵ A&nbsp;Scow Rig Tuning <span class="sub">log &amp; config editor</span></h1>
+    <div class="profile-bar">
+      <span id="whoami" class="whoami" hidden></span>
+      <span id="syncStatus" class="sync" title="Sync status" hidden></span>
+      <select id="profileSelect" title="Active boat profile"></select>
+      <button id="btnNewProfile" class="sm">+ New boat</button>
+      <button id="btnRenameProfile" class="sm ghost">Rename</button>
+      <button id="btnExport" class="sm ghost">Export</button>
+      <button id="btnImport" class="sm ghost">Import</button>
+      <button id="btnDeleteProfile" class="sm danger">Delete</button>
+      <input type="file" id="importFile" accept="application/json" hidden />
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button data-view="grid" class="active">Tuning Grid</button>
+    <button data-view="log">Tuning Log</button>
+    <button data-view="analysis">Analysis</button>
+  </nav>
+
+  <main>
+    <!-- ===== TUNING GRID ===== -->
+    <section id="view-grid" class="view active">
+      <div class="card">
+        <div class="flex-between">
+          <div>
+            <h2>Tuning Grid</h2>
+            <p class="hint">Reference settings by wind range. Edit cells inline; changes save to the active boat profile. <strong>turns</strong> are counted from each setup's base.</p>
+          </div>
+          <button id="btnAddSetup" class="sm">+ Add setup column</button>
+        </div>
+        <div id="gridWarnings"></div>
+        <div class="setup-tabs" id="setupTabs"></div>
+        <div class="grid-wrap"><div id="gridHost"></div></div>
+        <div id="setupNotes"></div>
+      </div>
+
+      <div class="card">
+        <details class="ref">
+          <summary><strong>Reference &amp; terminology</strong></summary>
+          <div class="banner warn" id="terminologyWarn" style="margin-top:10px;"></div>
+          <table class="kvtable" id="metaTable"></table>
+          <h4 style="margin:14px 0 4px; color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.5px;">Global notes</h4>
+          <ul class="notes-list" id="globalNotes"></ul>
+        </details>
+      </div>
+    </section>
+
+    <!-- ===== LOG ===== -->
+    <section id="view-log" class="view">
+      <div class="card">
+        <h2>New Log Entry</h2>
+        <p class="hint">Record actual conditions, the settings you sailed, and how the boat performed. Pre-fill the settings from a reference setup, then tweak to what you actually used.</p>
+        <form id="logForm">
+          <div class="row">
+            <div class="field"><label>Date</label><input type="date" id="logDate" required /></div>
+            <div class="field"><label>Venue / event</label><input type="text" id="logVenue" placeholder="e.g. Lake Minnetonka R3" /></div>
+            <div class="field"><label>Wind (kn)</label><input type="text" id="logWind" placeholder="e.g. 8-11" /></div>
+            <div class="field"><label>Wind range</label><select id="logRange"></select></div>
+            <div class="field"><label>Direction / state</label><input type="text" id="logWindDir" placeholder="e.g. SW, puffy, chop" /></div>
+          </div>
+          <div class="row" style="margin-top:10px; align-items:center;">
+            <div class="field"><label>Pre-fill settings from</label>
+              <select id="logPrefill"><option value="">— none —</option></select>
+            </div>
+            <button type="button" id="btnPrefill" class="sm">Load</button>
+          </div>
+
+          <div class="settings-grid" style="margin-top:14px;">
+            <div class="field"><label>Uppers — Loos</label><input type="text" id="setUppersLoos" placeholder="loos" /></div>
+            <div class="field"><label>Uppers — lbs</label><input type="text" id="setUppersLbs" placeholder="lbs" /></div>
+            <div class="field"><label>Uppers — turns</label><input type="text" id="setUppersTurns" placeholder="turns" /></div>
+            <div class="field"><label>Lowers — Loos</label><input type="text" id="setLowersLoos" placeholder="loos" /></div>
+            <div class="field"><label>Lowers — lbs</label><input type="text" id="setLowersLbs" placeholder="lbs" /></div>
+            <div class="field"><label>Lowers — turns</label><input type="text" id="setLowersTurns" placeholder="turns" /></div>
+            <div class="field"><label>Forestay / rake (in)</label><input type="text" id="setForestay" placeholder="in" /></div>
+            <div class="field"><label>Pre-bend (in)</label><input type="text" id="setPrebend" placeholder="in" /></div>
+          </div>
+
+          <details class="ref" style="margin-top:6px;">
+            <summary>Per-side (port / starboard) turnbuckle counts — hull runs ~5/8" high to starboard</summary>
+            <div class="row" style="margin-top:8px;">
+              <div class="field"><label>Uppers P / S turns</label>
+                <div class="side-pair"><input type="text" id="upPort" placeholder="port" /><input type="text" id="upStbd" placeholder="stbd" /></div>
+              </div>
+              <div class="field"><label>Lowers P / S turns</label>
+                <div class="side-pair"><input type="text" id="loPort" placeholder="port" /><input type="text" id="loStbd" placeholder="stbd" /></div>
+              </div>
+            </div>
+          </details>
+
+          <div class="row" style="margin-top:14px;">
+            <div class="field grow"><label>Observed performance</label><textarea id="logPerf" placeholder="Speed, pointing, balance, helm, mode vs fleet..."></textarea></div>
+          </div>
+          <div class="row" style="margin-top:10px;">
+            <div class="field grow"><label>Adjustments made (and why)</label><textarea id="logAdj" placeholder="e.g. +2 turns lowers mid-race, eased rake 0.5in — boat felt overbent"></textarea></div>
+          </div>
+          <div class="row" style="margin-top:10px;">
+            <div class="field grow"><label>Other notes</label><textarea id="logNotes" placeholder="Crew weight, sail set, results, anything to remember"></textarea></div>
+          </div>
+          <div class="row" style="margin-top:12px;">
+            <button type="submit" class="primary" id="logSubmitBtn">Save entry</button>
+            <button type="button" class="ghost" id="logCancelBtn" hidden>Cancel edit</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="flex-between">
+          <h2>Logbook</h2>
+          <input type="text" id="logSearch" placeholder="Filter entries..." style="max-width:240px;" />
+        </div>
+        <div id="logList"></div>
+      </div>
+    </section>
+
+    <!-- ===== ANALYSIS ===== -->
+    <section id="view-analysis" class="view">
+      <div class="card">
+        <h2>Tuning Over Time</h2>
+        <p class="hint">Log entries grouped by wind range so you can compare what you actually sailed against the reference grid and spot drift.</p>
+        <div id="analysisHost"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
