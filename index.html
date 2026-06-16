@@ -76,31 +76,43 @@
             <button type="button" id="btnPrefill" class="sm">Load</button>
           </div>
 
-          <div class="settings-grid" style="margin-top:14px;">
-            <div class="field"><label>Uppers — Loos</label><input type="text" id="setUppersLoos" placeholder="loos" /></div>
-            <div class="field"><label>Uppers — lbs</label><input type="text" id="setUppersLbs" placeholder="lbs" /></div>
-            <div class="field"><label>Uppers — turns</label><input type="text" id="setUppersTurns" placeholder="turns" /></div>
-            <div class="field"><label>Lowers — Loos</label><input type="text" id="setLowersLoos" placeholder="loos" /></div>
-            <div class="field"><label>Lowers — lbs</label><input type="text" id="setLowersLbs" placeholder="lbs" /></div>
-            <div class="field"><label>Lowers — turns</label><input type="text" id="setLowersTurns" placeholder="turns" /></div>
-            <div class="field"><label>Forestay / rake (in)</label><input type="text" id="setForestay" placeholder="in" /></div>
-            <div class="field"><label>Pre-bend (in)</label><input type="text" id="setPrebend" placeholder="in" /></div>
-          </div>
+          <div style="margin-top:14px;">
+            <h4 class="ps-head">Shroud tension — per side (Loos / lbs)</h4>
+            <p class="hint" style="margin:2px 0 6px;">Hull runs ~5/8" high to starboard, so port and starboard readings differ.</p>
 
-          <details class="ref" style="margin-top:6px;" open>
-            <summary>Per-side (port / starboard) — hull runs ~5/8" high to starboard, so port/stbd counts differ</summary>
-            <div class="row" style="margin-top:8px;">
-              <div class="field"><label>Uppers P / S</label>
-                <div class="side-pair"><input type="text" id="upPort" placeholder="port" /><input type="text" id="upStbd" placeholder="stbd" /></div>
-              </div>
-              <div class="field"><label>Lowers P / S</label>
-                <div class="side-pair"><input type="text" id="loPort" placeholder="port" /><input type="text" id="loStbd" placeholder="stbd" /></div>
-              </div>
-              <div class="field"><label>Diamonds P / S</label>
-                <div class="side-pair"><input type="text" id="diaPort" placeholder="port" /><input type="text" id="diaStbd" placeholder="stbd" /></div>
+            <div class="ps-wire">
+              <div class="ps-name">Uppers</div>
+              <div class="ps-grid">
+                <label>Port loos<input type="text" id="upPortLoos" placeholder="loos" /></label>
+                <label>Port lbs<input type="text" id="upPortLbs" placeholder="lbs" /></label>
+                <label>Stbd loos<input type="text" id="upStbdLoos" placeholder="loos" /></label>
+                <label>Stbd lbs<input type="text" id="upStbdLbs" placeholder="lbs" /></label>
               </div>
             </div>
-          </details>
+            <div class="ps-wire">
+              <div class="ps-name">Lowers</div>
+              <div class="ps-grid">
+                <label>Port loos<input type="text" id="loPortLoos" placeholder="loos" /></label>
+                <label>Port lbs<input type="text" id="loPortLbs" placeholder="lbs" /></label>
+                <label>Stbd loos<input type="text" id="loStbdLoos" placeholder="loos" /></label>
+                <label>Stbd lbs<input type="text" id="loStbdLbs" placeholder="lbs" /></label>
+              </div>
+            </div>
+            <div class="ps-wire">
+              <div class="ps-name">Diamonds</div>
+              <div class="ps-grid">
+                <label>Port loos<input type="text" id="diaPortLoos" placeholder="loos" /></label>
+                <label>Port lbs<input type="text" id="diaPortLbs" placeholder="lbs" /></label>
+                <label>Stbd loos<input type="text" id="diaStbdLoos" placeholder="loos" /></label>
+                <label>Stbd lbs<input type="text" id="diaStbdLbs" placeholder="lbs" /></label>
+              </div>
+            </div>
+
+            <div class="row" style="margin-top:12px;">
+              <div class="field"><label>Forestay / rake (in)</label><input type="text" id="setForestay" placeholder="in" /></div>
+              <div class="field"><label>Pre-bend (in)</label><input type="text" id="setPrebend" placeholder="in" /></div>
+            </div>
+          </div>
 
           <div class="row" style="margin-top:14px;">
             <div class="field grow"><label>Observed performance</label><textarea id="logPerf" placeholder="Speed, pointing, balance, helm, mode vs fleet..."></textarea></div>

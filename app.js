@@ -527,16 +527,20 @@ function prefillFromSetup() {
   if (!setup) return;
   const up = resolveCell(setup, rid, "uppers");
   const lo = resolveCell(setup, rid, "lowers");
+  const inter = resolveCell(setup, rid, "intermediates");
   const fs = resolveCell(setup, rid, "forestay");
-  $("#setUppersLoos").value = up.loos ?? "";
-  $("#setUppersLbs").value = up.lbs ?? "";
-  $("#setUppersTurns").value = up.turns ?? "";
-  $("#setLowersLoos").value = lo.loos ?? "";
-  $("#setLowersLbs").value = lo.lbs ?? "";
-  $("#setLowersTurns").value = lo.turns ?? "";
+  // reference grid is a single centerline value — seed both sides as a starting point
+  const seedSide = (ref, ids) => {
+    $("#" + ids[0]).value = ref.loos ?? "";
+    $("#" + ids[1]).value = ref.lbs ?? "";
+    $("#" + ids[2]).value = ref.loos ?? "";
+    $("#" + ids[3]).value = ref.lbs ?? "";
+  };
+  seedSide(up, ["upPortLoos", "upPortLbs", "upStbdLoos", "upStbdLbs"]);
+  seedSide(lo, ["loPortLoos", "loPortLbs", "loStbdLoos", "loStbdLbs"]);
+  seedSide(inter, ["diaPortLoos", "diaPortLbs", "diaStbdLoos", "diaStbdLbs"]);
   $("#setForestay").value = fs.in ?? "";
   // pre-bend: from the grid's intermediates row, falling back to the byBand reference
-  const inter = resolveCell(setup, rid, "intermediates");
   let pbv = inter.in;
   if (pbv == null || pbv === "") {
     const pb = cfg.prebend?.byBand || {};
@@ -559,15 +563,13 @@ function collectLogForm() {
     rangeId: $("#logRange").value,
     windDir: $("#logWindDir").value.trim(),
     settings: {
-      uppers: { loos: $("#setUppersLoos").value.trim(), lbs: $("#setUppersLbs").value.trim(), turns: $("#setUppersTurns").value.trim() },
-      lowers: { loos: $("#setLowersLoos").value.trim(), lbs: $("#setLowersLbs").value.trim(), turns: $("#setLowersTurns").value.trim() },
       forestay: $("#setForestay").value.trim(),
       prebend: $("#setPrebend").value.trim()
     },
     perSide: {
-      uppers: { port: $("#upPort").value.trim(), stbd: $("#upStbd").value.trim() },
-      lowers: { port: $("#loPort").value.trim(), stbd: $("#loStbd").value.trim() },
-      intermediates: { port: $("#diaPort").value.trim(), stbd: $("#diaStbd").value.trim() }
+      uppers: { port: { loos: $("#upPortLoos").value.trim(), lbs: $("#upPortLbs").value.trim() }, stbd: { loos: $("#upStbdLoos").value.trim(), lbs: $("#upStbdLbs").value.trim() } },
+      lowers: { port: { loos: $("#loPortLoos").value.trim(), lbs: $("#loPortLbs").value.trim() }, stbd: { loos: $("#loStbdLoos").value.trim(), lbs: $("#loStbdLbs").value.trim() } },
+      intermediates: { port: { loos: $("#diaPortLoos").value.trim(), lbs: $("#diaPortLbs").value.trim() }, stbd: { loos: $("#diaStbdLoos").value.trim(), lbs: $("#diaStbdLbs").value.trim() } }
     },
     performance: $("#logPerf").value.trim(),
     adjustments: $("#logAdj").value.trim(),
@@ -613,21 +615,19 @@ function editLog(id) {
   $("#logRange").value = l.rangeId || "";
   $("#logWindDir").value = l.windDir || "";
   const s = l.settings || {};
-  $("#setUppersLoos").value = s.uppers?.loos || "";
-  $("#setUppersLbs").value = s.uppers?.lbs || "";
-  $("#setUppersTurns").value = s.uppers?.turns || "";
-  $("#setLowersLoos").value = s.lowers?.loos || "";
-  $("#setLowersLbs").value = s.lowers?.lbs || "";
-  $("#setLowersTurns").value = s.lowers?.turns || "";
   $("#setForestay").value = s.forestay || "";
   $("#setPrebend").value = s.prebend || "";
   const ps = l.perSide || {};
-  $("#upPort").value = ps.uppers?.port || "";
-  $("#upStbd").value = ps.uppers?.stbd || "";
-  $("#loPort").value = ps.lowers?.port || "";
-  $("#loStbd").value = ps.lowers?.stbd || "";
-  $("#diaPort").value = ps.intermediates?.port || "";
-  $("#diaStbd").value = ps.intermediates?.stbd || "";
+  const setSide = (wire, ids) => {
+    const w = ps[wire] || {};
+    $("#" + ids[0]).value = w.port?.loos || "";
+    $("#" + ids[1]).value = w.port?.lbs || "";
+    $("#" + ids[2]).value = w.stbd?.loos || "";
+    $("#" + ids[3]).value = w.stbd?.lbs || "";
+  };
+  setSide("uppers", ["upPortLoos", "upPortLbs", "upStbdLoos", "upStbdLbs"]);
+  setSide("lowers", ["loPortLoos", "loPortLbs", "loStbdLoos", "loStbdLbs"]);
+  setSide("intermediates", ["diaPortLoos", "diaPortLbs", "diaStbdLoos", "diaStbdLbs"]);
   $("#logPerf").value = l.performance || "";
   $("#logAdj").value = l.adjustments || "";
   $("#logNotes").value = l.notes || "";
@@ -666,14 +666,23 @@ function settingsSummary(s) {
 function perSideSummary(ps) {
   if (!ps) return "";
   const out = [];
+  const sideStr = (side) => {
+    if (side == null) return null;
+    if (typeof side === "string") return side || null;            // legacy entries (single value)
+    const bits = [side.loos, side.lbs].filter((x) => x !== "" && x != null);
+    return bits.length ? bits.join("/") : null;
+  };
   const add = (key, label) => {
     const w = ps[key];
-    if (w && (w.port || w.stbd)) out.push(`${label} P/S ${w.port || "?"}/${w.stbd || "?"}`);
+    if (!w) return;
+    const p = sideStr(w.port), s = sideStr(w.stbd);
+    if (!p && !s) return;
+    out.push(`${label} P ${p || "—"} · S ${s || "—"}`);
   };
   add("uppers", "Uppers");
   add("lowers", "Lowers");
   add("intermediates", "Diamonds");
-  return out.join(" · ");
+  return out.length ? out.join("  |  ") + "  (loos/lbs)" : "";
 }
 
 function renderLogList() {
@@ -740,34 +749,48 @@ function renderAnalysis() {
       if (refSetup && r.id !== "unspecified") {
         const up = resolveCell(refSetup, r.id, "uppers");
         const lo = resolveCell(refSetup, r.id, "lowers");
+        const di = resolveCell(refSetup, r.id, "intermediates");
         const fs = resolveCell(refSetup, r.id, "forestay");
         refRow = `<tr style="opacity:.75"><td><strong>REF ${esc(refSetup.label)}</strong></td>
-          <td>${fmtVal("uppers", up)}</td><td>${fmtVal("lowers", lo)}</td><td>${fmtVal("forestay", fs)}</td><td colspan="2" class="muted">reference grid</td></tr>`;
+          <td>${fmtVal("uppers", up)}</td><td>${fmtVal("lowers", lo)}</td><td>${fmtVal("intermediates", di)}</td><td>${fmtVal("forestay", fs)}</td><td colspan="2" class="muted">reference grid</td></tr>`;
       }
+      const sideStr = (sd) => {
+        if (sd == null) return null;
+        if (typeof sd === "string") return sd || null;        // legacy single value
+        const b = [sd.loos, sd.lbs].filter((x) => x !== "" && x != null);
+        return b.length ? b.join("/") : null;
+      };
       const rows = entries.map((l) => {
         const s = l.settings || {};
-        const cell = (w) => {
-          if (!w) return "—";
-          const b = [];
-          if (w.loos) b.push(`${w.loos} loos`);
-          if (w.lbs) b.push(`${w.lbs} lbs`);
-          if (w.turns) b.push(`${w.turns}t`);
-          return b.join("<br>") || "—";
+        const ps = l.perSide || {};
+        const psCell = (wire, legacy) => {
+          const w = ps[wire];
+          if (!w) {
+            if (legacy && (legacy.loos || legacy.lbs)) {
+              return [legacy.loos && `${legacy.loos} loos`, legacy.lbs && `${legacy.lbs} lbs`].filter(Boolean).join("<br>");
+            }
+            return "—";
+          }
+          const pp = sideStr(w.port), ss = sideStr(w.stbd);
+          if (!pp && !ss) return "—";
+          return `P ${pp || "—"}<br>S ${ss || "—"}`;
         };
         return `<tr>
           <td>${esc(l.date)}${l.wind ? `<br><span class="cell-sub">${esc(l.wind)} kn</span>` : ""}</td>
-          <td>${cell(s.uppers)}</td>
-          <td>${cell(s.lowers)}</td>
+          <td>${psCell("uppers", s.uppers)}</td>
+          <td>${psCell("lowers", s.lowers)}</td>
+          <td>${psCell("intermediates")}</td>
           <td>${s.forestay ? esc(s.forestay) + '"' : "—"}${s.prebend ? `<br><span class="cell-sub">pb ${esc(s.prebend)}"</span>` : ""}</td>
           <td>${esc((l.performance || "").slice(0, 80))}${(l.performance || "").length > 80 ? "…" : ""}</td>
           <td>${esc((l.adjustments || "").slice(0, 80))}${(l.adjustments || "").length > 80 ? "…" : ""}</td>
         </tr>`;
       }).join("");
       const label = r.id === "unspecified" ? "Unspecified range" : `${r.knots[0]}–${r.knots[1]} kn`;
+      const sub = '<br><span class="cell-sub">P/S loos/lbs</span>';
       return `<div style="margin-bottom:18px;">
         <h3 style="margin:0 0 6px;">${label} <span class="pill tape-${r.tape}">${r.band}</span> <span class="analysis-target">${entries.length} entr${entries.length === 1 ? "y" : "ies"}</span></h3>
         <div class="grid-wrap"><table class="grid">
-          <thead><tr><th>Date</th><th>Uppers</th><th>Lowers</th><th>Forestay / pb</th><th>Performance</th><th>Adjustments</th></tr></thead>
+          <thead><tr><th>Date</th><th>Uppers${sub}</th><th>Lowers${sub}</th><th>Diamonds${sub}</th><th>Forestay / pb</th><th>Performance</th><th>Adjustments</th></tr></thead>
           <tbody>${refRow}${rows}</tbody>
         </table></div>
       </div>`;
