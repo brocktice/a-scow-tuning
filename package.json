@@ -1,0 +1,21 @@
+{
+  "name": "a-scow-tuning",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A Scow rig tuning log & config editor — self-hosted server (magic-link auth, shared boats)",
+  "type": "module",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "STATIC_DIR=. node server/server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "cookie": "^1.0.2",
+    "express": "^4.21.2",
+    "nodemailer": "^6.10.0"
+  }
+}

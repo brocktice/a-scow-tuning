@@ -1,0 +1,42 @@
+# Deployed on web2. haproxy (ingress) routes:
+#   atuner.anfani.com :80  -> web2:8884   (ACME HTTP-01 + redirect, handled by Caddy)
+#   atuner.anfani.com :443 -> web2:8445   (SNI passthrough; Caddy terminates TLS)
+# Pick ports that are free on web2 if these clash.
+services:
+  atuner:
+    build:
+      context: .
+    image: local/atuner:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PORT: 8790
+      DB_PATH: /data/atuner.db
+      STATIC_DIR: /app/public
+      APP_BASE_URL: https://atuner.anfani.com
+      COOKIE_SECURE: "true"
+    volumes:
+      - atuner_data:/data
+    expose:
+      - "8790"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - atuner
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:-admin@anfani.com}
+    ports:
+      - "8884:80"
+      - "8445:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  atuner_data:
+  caddy_data:
+  caddy_config:

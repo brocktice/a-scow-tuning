@@ -1,0 +1,11 @@
+# Caddy terminates TLS for atuner.anfani.com (auto Let's Encrypt) and reverse-proxies
+# to the Node app. haproxy on the ingress does SNI passthrough on :443 and proxies :80,
+# so ACME HTTP-01 reaches Caddy through the haproxy http route.
+{
+	email {$ACME_EMAIL:admin@anfani.com}
+}
+
+atuner.anfani.com {
+	encode gzip
+	reverse_proxy atuner:8790
+}

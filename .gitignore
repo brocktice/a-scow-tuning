@@ -9,5 +9,12 @@ node_modules/
 .wrangler/
 .DS_Store
 
+# server runtime
+.env
+data/
+*.db
+*.db-wal
+*.db-shm
+
 # Cloudflare API token (never commit)
 .cf_token

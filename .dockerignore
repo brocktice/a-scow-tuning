@@ -1,0 +1,11 @@
+node_modules
+.git
+.wrangler
+.env
+*.pem
+store.json
+*.ai
+catapult-iv-tuning-card.html
+functions
+data
+*.tmp
