@@ -1312,38 +1312,44 @@ function diagramSide(T, prebend, forestay) {
 }
 
 function diagramFront(T) {
-  const W = 340, H = 440, deckYb = 348, waterY = 362, topY = 50;
-  const cx = 170;
-  const tilt = 6;                                       // exaggerated hull asymmetry (stbd high)
+  // To scale with the side view. A Scow: 38 ft LOA, 8 ft beam => beam ~= 21% of
+  // length. Side-view hull spans ~268 px (= 38 ft) => ~7 px/ft. Beam 8 ft ~= 56 px.
+  // Mast deck->masthead matches the side view (deckY 345 -> topY 56).
+  const W = 340, H = 440, deckYb = 345, topY = 56;
+  const cx = 170, halfBeam = 28;                        // 8 ft beam to scale
+  const tilt = 4;                                       // exaggerated hull asymmetry (stbd high)
   const deckL = deckYb - tilt, deckR = deckYb + tilt;   // stbd=left higher, port=right lower
-  const hLow = 248, hUp = 150;                          // lower / upper spreader heights on mast
-  const spLow = 80, spUp = 60;                          // spreader half-lengths
-  const tipLowY = hLow + 4, tipUpY = hUp + 4;           // tips swept slightly down
-  const cpLX = 58, cpRX = 282;
+  const waterY = deckYb + 11;
+  const mastH = deckYb - topY;
+  const hLow = deckYb - 0.40 * mastH, hUp = deckYb - 0.64 * mastH;  // spreader heights (match side)
+  const spLow = 17, spUp = 14;                          // spreader half-lengths (~2.5 / 2 ft)
+  const tipLowY = hLow + 3, tipUpY = hUp + 3;           // tips swept slightly down
+  const cpLX = cx - 26, cpRX = cx + 26;                 // chainplates near the rail, outboard of tips
   const c = (id, side) => tensionColor(T[id][side].lbs, T[id].size);
 
   // sign: +1 = port (viewer's right), -1 = stbd (viewer's left)
   const sideRig = (sign, sd, cpX, deck) => {
     const lowTipX = cx + sign * spLow, upTipX = cx + sign * spUp;
     return `
-      ${line(cx, hLow, lowTipX, tipLowY, "#5c6b76", 3)}
-      ${line(cx, hUp, upTipX, tipUpY, "#5c6b76", 3)}
-      ${poly([[cx, deckYb], [lowTipX, tipLowY], [upTipX, tipUpY], [cx, topY]], c("upper", sd), 3.5)}
-      ${poly([[cx, hUp], [lowTipX, tipLowY], [cpX, deck]], c("inter", sd), 3.5)}
-      ${line(cx, hLow, cpX, deck, c("lower", sd), 3.5)}`;
+      ${line(cx, hLow, lowTipX, tipLowY, "#5c6b76", 2.5)}
+      ${line(cx, hUp, upTipX, tipUpY, "#5c6b76", 2.5)}
+      ${poly([[cx, deckYb], [lowTipX, tipLowY], [upTipX, tipUpY], [cx, topY]], c("upper", sd), 3)}
+      ${poly([[cx, hUp], [lowTipX, tipLowY], [cpX, deck]], c("inter", sd), 3)}
+      ${line(cx, hLow, cpX, deck, c("lower", sd), 3)}`;
   };
 
+  const xl = cx - halfBeam, xr = cx + halfBeam, botY = deckYb + 13;  // flat, shallow scow hull
   return `<svg viewBox="0 0 ${W} ${H}" class="diag-svg" role="img" aria-label="Front view">
     <line x1="12" y1="${waterY}" x2="${W - 12}" y2="${waterY}" stroke="#9fc3e0" stroke-width="2"/>
-    <path d="M 40,${deckL} L 300,${deckR} C 286,382 200,392 170,392 C 140,392 54,382 40,${deckL} Z" fill="#eef2f6" stroke="#33424f" stroke-width="2"/>
+    <path d="M ${xl},${deckL} L ${xr},${deckR} L ${xr - 2},${botY} Q ${cx},${botY + 3} ${xl + 2},${botY} Z" fill="#eef2f6" stroke="#33424f" stroke-width="2"/>
     ${sideRig(1, "port", cpRX, deckR)}
     ${sideRig(-1, "stbd", cpLX, deckL)}
     <!-- mast: plumb (vertical) regardless of deck tilt -->
     ${line(cx, deckYb, cx, topY, "#2b3742", 5)}
-    <circle cx="${cpLX}" cy="${deckL}" r="3" fill="#33424f"/>
-    <circle cx="${cpRX}" cy="${deckR}" r="3" fill="#33424f"/>
-    <text x="${cpLX}" y="${deckL - 8}" class="diag-t" text-anchor="middle">Stbd</text>
-    <text x="${cpRX}" y="${deckR - 8}" class="diag-t" text-anchor="middle">Port</text>
+    <circle cx="${cpLX}" cy="${deckL}" r="2.5" fill="#33424f"/>
+    <circle cx="${cpRX}" cy="${deckR}" r="2.5" fill="#33424f"/>
+    <text x="${xl - 12}" y="${deckL - 10}" class="diag-t" text-anchor="end">Stbd</text>
+    <text x="${xr + 12}" y="${deckR - 10}" class="diag-t" text-anchor="start">Port</text>
   </svg>`;
 }
 
