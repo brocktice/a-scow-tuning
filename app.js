@@ -1349,7 +1349,7 @@ function diagramSide(T, prebend, forestay) {
   const ptLower = [lowP[0] + (yL - lowP[1]) / (fwdCP[1] - lowP[1]) * (fwdCP[0] - lowP[0]), yL];
   const sideCall = (name, t, tgt) => `
     <text x="8" y="${(tgt[1] - 4).toFixed(1)}" class="diag-t" text-anchor="start" font-weight="600">${name}</text>
-    <text x="8" y="${(tgt[1] + 8).toFixed(1)}" class="diag-t" text-anchor="start">${tLabel(t.port.lbs, t.size)} · ${tLabel(t.stbd.lbs, t.size)}</text>
+    <text x="8" y="${(tgt[1] + 8).toFixed(1)}" class="diag-t" text-anchor="start">P ${tLabel(t.port.lbs, t.size)} · S ${tLabel(t.stbd.lbs, t.size)}</text>
     <line x1="92" y1="${tgt[1].toFixed(1)}" x2="${tgt[0].toFixed(1)}" y2="${tgt[1].toFixed(1)}" stroke="#33424f" stroke-width="1" marker-end="url(#shArrow)"/>`;
   const shroudCalls = sideCall("Uppers", T.upper, ptUp) + sideCall("Intermediates", T.inter, ptInter) + sideCall("Lowers", T.lower, ptLower);
 
