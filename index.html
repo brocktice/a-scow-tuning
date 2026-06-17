@@ -11,6 +11,10 @@
     <h1>⛵ A&nbsp;Scow Rig Tuning <span class="sub">log &amp; config editor</span></h1>
     <div class="profile-bar">
       <span id="whoami" class="whoami" hidden></span>
+      <label class="gauge-pick" title="Loos gauge used for all readings &amp; inputs">Gauge
+        <select id="gaugeSelect"><option value="Model A">Model A</option><option value="PT-1">PT-1</option></select>
+      </label>
+      <button id="btnConvert" class="sm ghost" title="Loos / pounds converter">⇄ Convert</button>
       <span id="syncStatus" class="sync" title="Sync status" hidden></span>
       <select id="profileSelect" title="Active boat profile"></select>
       <button id="btnNewProfile" class="sm">+ New boat</button>
@@ -77,33 +81,33 @@
           </div>
 
           <div style="margin-top:14px;">
-            <h4 class="ps-head">Shroud tension — per side (Loos / lbs)</h4>
+            <h4 class="ps-head">Shroud tension — per side (<span class="ps-gauge">Model A</span> / lbs)</h4>
             <p class="hint" style="margin:2px 0 6px;">Hull runs ~5/8" high to starboard, so port and starboard readings differ.</p>
 
             <div class="ps-wire">
               <div class="ps-name">Uppers</div>
               <div class="ps-grid">
-                <label>Port loos<input type="text" id="upPortLoos" placeholder="loos" /></label>
+                <label>Port <span class="ps-unit">loos</span><input type="text" id="upPortLoos" /></label>
                 <label>Port lbs<input type="text" id="upPortLbs" placeholder="lbs" /></label>
-                <label>Stbd loos<input type="text" id="upStbdLoos" placeholder="loos" /></label>
+                <label>Stbd <span class="ps-unit">loos</span><input type="text" id="upStbdLoos" /></label>
                 <label>Stbd lbs<input type="text" id="upStbdLbs" placeholder="lbs" /></label>
               </div>
             </div>
             <div class="ps-wire">
               <div class="ps-name">Lowers</div>
               <div class="ps-grid">
-                <label>Port loos<input type="text" id="loPortLoos" placeholder="loos" /></label>
+                <label>Port <span class="ps-unit">loos</span><input type="text" id="loPortLoos" /></label>
                 <label>Port lbs<input type="text" id="loPortLbs" placeholder="lbs" /></label>
-                <label>Stbd loos<input type="text" id="loStbdLoos" placeholder="loos" /></label>
+                <label>Stbd <span class="ps-unit">loos</span><input type="text" id="loStbdLoos" /></label>
                 <label>Stbd lbs<input type="text" id="loStbdLbs" placeholder="lbs" /></label>
               </div>
             </div>
             <div class="ps-wire">
               <div class="ps-name">Diamonds</div>
               <div class="ps-grid">
-                <label>Port loos<input type="text" id="diaPortLoos" placeholder="loos" /></label>
+                <label>Port <span class="ps-unit">loos</span><input type="text" id="diaPortLoos" /></label>
                 <label>Port lbs<input type="text" id="diaPortLbs" placeholder="lbs" /></label>
-                <label>Stbd loos<input type="text" id="diaStbdLoos" placeholder="loos" /></label>
+                <label>Stbd <span class="ps-unit">loos</span><input type="text" id="diaStbdLoos" /></label>
                 <label>Stbd lbs<input type="text" id="diaStbdLbs" placeholder="lbs" /></label>
               </div>
             </div>
@@ -152,7 +156,32 @@
 
   <div class="toast" id="toast"></div>
 
+  <!-- Loos / pounds converter popup -->
+  <div class="modal-overlay" id="convertModal" hidden>
+    <div class="modal" role="dialog" aria-label="Tension converter">
+      <div class="modal-head">
+        <h2>Tension converter</h2>
+        <button class="modal-x" id="convertClose" aria-label="Close">✕</button>
+      </div>
+      <div class="row" style="margin-bottom:10px;">
+        <div class="field grow"><label>Wire</label>
+          <select id="convWire">
+            <option value="5/32">Uppers / Lowers — 5/32"</option>
+            <option value="1/8">Diamonds — 1/8"</option>
+          </select>
+        </div>
+      </div>
+      <div class="conv-grid">
+        <div class="field"><label>Pounds (lbs)</label><input type="number" id="convLbs" inputmode="decimal" placeholder="lbs" /></div>
+        <div class="field"><label>Model A</label><input type="number" id="convModelA" inputmode="decimal" placeholder="reading" /></div>
+        <div class="field"><label>PT-1</label><input type="number" id="convPT1" inputmode="decimal" placeholder="reading" /></div>
+      </div>
+      <p class="hint" id="convNote" style="margin:10px 0 0;">Type any field to convert the others. lbs is the common reference.</p>
+    </div>
+  </div>
+
   <script src="data.js"></script>
+  <script src="convert.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

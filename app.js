@@ -95,6 +95,7 @@ function normalizeState(st) {
     p.log = Array.isArray(p.log) ? p.log : [];
   }
   if (!st.profiles.some((p) => p.id === st.activeProfileId)) st.activeProfileId = st.profiles[0].id;
+  if (!GAUGES.includes(st.gauge)) st.gauge = "Model A";
   return st;
 }
 
@@ -102,8 +103,30 @@ function seedState() {
   const id = uid();
   return {
     activeProfileId: id,
+    gauge: "Model A",
     profiles: [makeProfile("Catapult IV", id)]
   };
+}
+
+/* ---------- gauge (Model A / PT-1) ---------- */
+// Stored loos readings are canonical Model A; we convert to/from the active gauge
+// for every display and input across the app. lbs is gauge-neutral and untouched.
+function activeGauge() { return GAUGES.includes(state.gauge) ? state.gauge : "Model A"; }
+function gaugeUnit() { return activeGauge() === "PT-1" ? "PT-1" : "loos"; }
+
+// canonical Model A loos -> value shown in the active gauge
+function loosToDisplay(wireRow, loos) {
+  if (loos === "" || loos == null) return "";
+  if (activeGauge() === "Model A") return loos;
+  const v = convertReading("Model A", "PT-1", WIRE_SIZE[wireRow], loos);
+  return v == null ? "" : v;
+}
+// value entered in the active gauge -> canonical Model A loos for storage
+function loosToStore(wireRow, entered) {
+  if (entered === "" || entered == null) return null;
+  if (activeGauge() === "Model A") return num(entered);
+  const v = convertReading("PT-1", "Model A", WIRE_SIZE[wireRow], entered);
+  return v == null ? null : v;
 }
 
 function makeProfile(name, id) {
@@ -230,10 +253,10 @@ function fmtVal(wire, v) {
     if (v.in != null) parts.push(`<span class="cell-main">${v.in}"</span>`);
   } else if (wire === "intermediates") {
     if (v.in != null && v.in !== "") parts.push(`<span class="cell-main">${esc(v.in)}" bend</span>`);
-    if (v.loos != null) parts.push(`<span class="cell-sub">${v.loos} loos</span>`);
+    if (v.loos != null) parts.push(`<span class="cell-sub">${loosToDisplay(wire, v.loos)} ${gaugeUnit()}</span>`);
     if (v.lbs != null) parts.push(`<span class="cell-sub">${v.lbs} lbs</span>`);
   } else {
-    if (v.loos != null) parts.push(`<span class="cell-main">${v.loos} loos</span>`);
+    if (v.loos != null) parts.push(`<span class="cell-main">${loosToDisplay(wire, v.loos)} ${gaugeUnit()}</span>`);
     if (v.lbs != null) parts.push(`<span class="cell-sub">${v.lbs} lbs</span>`);
   }
   if (v.turns != null) parts.push(`<span class="cell-turns">${v.turns > 0 ? "+" : ""}${v.turns}t</span>`);
@@ -420,13 +443,15 @@ function editCell(setup, where, wire) {
     : ((setup.byWind[where] = setup.byWind[where] || {}), (setup.byWind[where][wire] = setup.byWind[where][wire] || {}));
   const path = `${where}|${wire}`;
   const f = (k, ph) => `<label>${ph}<input data-cell="${path}" data-k="${k}" value="${cell[k] != null ? esc(cell[k]) : ""}" /></label>`;
+  // loos shows in the active gauge (stored value is canonical Model A)
+  const fLoos = () => `<label>${gaugeUnit()}<input data-cell="${path}" data-k="loos" value="${esc(loosToDisplay(wire, cell.loos))}" /></label>`;
   let inputs;
   if (wire === "forestay") {
     inputs = f("in", "in");
   } else if (wire === "intermediates") {
-    inputs = f("in", "bend in") + f("loos", "loos") + f("lbs", "lbs") + (where !== "base" ? f("turns", "turns") : "");
+    inputs = f("in", "bend in") + fLoos() + f("lbs", "lbs") + (where !== "base" ? f("turns", "turns") : "");
   } else {
-    inputs = f("loos", "loos") + f("lbs", "lbs") + (where !== "base" ? f("turns", "turns") : "");
+    inputs = fLoos() + f("lbs", "lbs") + (where !== "base" ? f("turns", "turns") : "");
   }
   // note + sameAsBase for wind cells
   let extra = "";
@@ -448,6 +473,9 @@ function commitCellEdit(input) {
   const isText = k === "note" || (wire === "intermediates" && k === "in");
   if (isText) {
     if (raw) target[k] = raw; else delete target[k];
+  } else if (k === "loos") {
+    const v = loosToStore(wire, raw);   // entered in active gauge -> canonical Model A
+    if (v == null) delete target.loos; else target.loos = v;
   } else {
     const n = num(raw);
     if (n == null) delete target[k]; else target[k] = n;
@@ -530,15 +558,16 @@ function prefillFromSetup() {
   const inter = resolveCell(setup, rid, "intermediates");
   const fs = resolveCell(setup, rid, "forestay");
   // reference grid is a single centerline value — seed both sides as a starting point
-  const seedSide = (ref, ids) => {
-    $("#" + ids[0]).value = ref.loos ?? "";
+  const seedSide = (ref, wireRow, ids) => {
+    const disp = loosToDisplay(wireRow, ref.loos);  // ref.loos is canonical Model A
+    $("#" + ids[0]).value = disp;
     $("#" + ids[1]).value = ref.lbs ?? "";
-    $("#" + ids[2]).value = ref.loos ?? "";
+    $("#" + ids[2]).value = disp;
     $("#" + ids[3]).value = ref.lbs ?? "";
   };
-  seedSide(up, ["upPortLoos", "upPortLbs", "upStbdLoos", "upStbdLbs"]);
-  seedSide(lo, ["loPortLoos", "loPortLbs", "loStbdLoos", "loStbdLbs"]);
-  seedSide(inter, ["diaPortLoos", "diaPortLbs", "diaStbdLoos", "diaStbdLbs"]);
+  seedSide(up, "uppers", ["upPortLoos", "upPortLbs", "upStbdLoos", "upStbdLbs"]);
+  seedSide(lo, "lowers", ["loPortLoos", "loPortLbs", "loStbdLoos", "loStbdLbs"]);
+  seedSide(inter, "intermediates", ["diaPortLoos", "diaPortLbs", "diaStbdLoos", "diaStbdLbs"]);
   $("#setForestay").value = fs.in ?? "";
   // pre-bend: from the grid's intermediates row, falling back to the byBand reference
   let pbv = inter.in;
@@ -566,11 +595,18 @@ function collectLogForm() {
       forestay: $("#setForestay").value.trim(),
       prebend: $("#setPrebend").value.trim()
     },
-    perSide: {
-      uppers: { port: { loos: $("#upPortLoos").value.trim(), lbs: $("#upPortLbs").value.trim() }, stbd: { loos: $("#upStbdLoos").value.trim(), lbs: $("#upStbdLbs").value.trim() } },
-      lowers: { port: { loos: $("#loPortLoos").value.trim(), lbs: $("#loPortLbs").value.trim() }, stbd: { loos: $("#loStbdLoos").value.trim(), lbs: $("#loStbdLbs").value.trim() } },
-      intermediates: { port: { loos: $("#diaPortLoos").value.trim(), lbs: $("#diaPortLbs").value.trim() }, stbd: { loos: $("#diaStbdLoos").value.trim(), lbs: $("#diaStbdLbs").value.trim() } }
-    },
+    perSide: (() => {
+      // loos inputs are in the active gauge -> store canonical Model A
+      const side = (wireRow, loosId, lbsId) => ({
+        loos: loosToStore(wireRow, $("#" + loosId).value.trim()) ?? "",
+        lbs: $("#" + lbsId).value.trim()
+      });
+      return {
+        uppers: { port: side("uppers", "upPortLoos", "upPortLbs"), stbd: side("uppers", "upStbdLoos", "upStbdLbs") },
+        lowers: { port: side("lowers", "loPortLoos", "loPortLbs"), stbd: side("lowers", "loStbdLoos", "loStbdLbs") },
+        intermediates: { port: side("intermediates", "diaPortLoos", "diaPortLbs"), stbd: side("intermediates", "diaStbdLoos", "diaStbdLbs") }
+      };
+    })(),
     performance: $("#logPerf").value.trim(),
     adjustments: $("#logAdj").value.trim(),
     notes: $("#logNotes").value.trim()
@@ -620,9 +656,9 @@ function editLog(id) {
   const ps = l.perSide || {};
   const setSide = (wire, ids) => {
     const w = ps[wire] || {};
-    $("#" + ids[0]).value = w.port?.loos || "";
+    $("#" + ids[0]).value = loosToDisplay(wire, w.port?.loos);   // canonical -> active gauge
     $("#" + ids[1]).value = w.port?.lbs || "";
-    $("#" + ids[2]).value = w.stbd?.loos || "";
+    $("#" + ids[2]).value = loosToDisplay(wire, w.stbd?.loos);
     $("#" + ids[3]).value = w.stbd?.lbs || "";
   };
   setSide("uppers", ["upPortLoos", "upPortLbs", "upStbdLoos", "upStbdLbs"]);
@@ -666,23 +702,24 @@ function settingsSummary(s) {
 function perSideSummary(ps) {
   if (!ps) return "";
   const out = [];
-  const sideStr = (side) => {
+  const sideStr = (wire, side) => {
     if (side == null) return null;
     if (typeof side === "string") return side || null;            // legacy entries (single value)
-    const bits = [side.loos, side.lbs].filter((x) => x !== "" && x != null);
+    const loos = side.loos === "" || side.loos == null ? null : loosToDisplay(wire, side.loos);
+    const bits = [loos, side.lbs].filter((x) => x !== "" && x != null);
     return bits.length ? bits.join("/") : null;
   };
   const add = (key, label) => {
     const w = ps[key];
     if (!w) return;
-    const p = sideStr(w.port), s = sideStr(w.stbd);
+    const p = sideStr(key, w.port), s = sideStr(key, w.stbd);
     if (!p && !s) return;
     out.push(`${label} P ${p || "—"} · S ${s || "—"}`);
   };
   add("uppers", "Uppers");
   add("lowers", "Lowers");
   add("intermediates", "Diamonds");
-  return out.length ? out.join("  |  ") + "  (loos/lbs)" : "";
+  return out.length ? out.join("  |  ") + `  (${gaugeUnit()}/lbs)` : "";
 }
 
 function renderLogList() {
@@ -754,10 +791,11 @@ function renderAnalysis() {
         refRow = `<tr style="opacity:.75"><td><strong>REF ${esc(refSetup.label)}</strong></td>
           <td>${fmtVal("uppers", up)}</td><td>${fmtVal("lowers", lo)}</td><td>${fmtVal("intermediates", di)}</td><td>${fmtVal("forestay", fs)}</td><td colspan="2" class="muted">reference grid</td></tr>`;
       }
-      const sideStr = (sd) => {
+      const sideStr = (wire, sd) => {
         if (sd == null) return null;
         if (typeof sd === "string") return sd || null;        // legacy single value
-        const b = [sd.loos, sd.lbs].filter((x) => x !== "" && x != null);
+        const loos = sd.loos === "" || sd.loos == null ? null : loosToDisplay(wire, sd.loos);
+        const b = [loos, sd.lbs].filter((x) => x !== "" && x != null);
         return b.length ? b.join("/") : null;
       };
       const rows = entries.map((l) => {
@@ -771,7 +809,7 @@ function renderAnalysis() {
             }
             return "—";
           }
-          const pp = sideStr(w.port), ss = sideStr(w.stbd);
+          const pp = sideStr(wire, w.port), ss = sideStr(wire, w.stbd);
           if (!pp && !ss) return "—";
           return `P ${pp || "—"}<br>S ${ss || "—"}`;
         };
@@ -786,7 +824,7 @@ function renderAnalysis() {
         </tr>`;
       }).join("");
       const label = r.id === "unspecified" ? "Unspecified range" : `${r.knots[0]}–${r.knots[1]} kn`;
-      const sub = '<br><span class="cell-sub">P/S loos/lbs</span>';
+      const sub = `<br><span class="cell-sub">P/S ${gaugeUnit()}/lbs</span>`;
       return `<div style="margin-bottom:18px;">
         <h3 style="margin:0 0 6px;">${label} <span class="pill tape-${r.tape}">${r.band}</span> <span class="analysis-target">${entries.length} entr${entries.length === 1 ? "y" : "ies"}</span></h3>
         <div class="grid-wrap"><table class="grid">
@@ -815,6 +853,70 @@ function renderReference() {
     ["Pre-bend status", cfg.prebend && !cfg.prebend.confirmed ? "Unconfirmed — replace with your measured values" : null]
   ].filter(([, v]) => v).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join("");
   $("#globalNotes").innerHTML = (cfg.globalNotes || []).map((n) => `<li>${esc(n)}</li>`).join("");
+}
+
+/* ============================================================
+   CONVERTER (popup)
+   ============================================================ */
+function openConverter() {
+  $("#convertModal").hidden = false;
+  $("#convLbs").focus();
+}
+function closeConverter() { $("#convertModal").hidden = true; }
+
+function runConvert(source) {
+  const wire = $("#convWire").value;
+  const lbsEl = $("#convLbs"), aEl = $("#convModelA"), ptEl = $("#convPT1");
+  const show = (v) => (v == null ? "" : v);
+  // derive the common lbs anchor from whichever field drove the change
+  let lbs;
+  if (source === "A") lbs = gaugeToLbs("Model A", wire, aEl.value);
+  else if (source === "PT1") lbs = gaugeToLbs("PT-1", wire, ptEl.value);
+  else lbs = num(lbsEl.value);                 // "lbs" or "wire"
+  if (source !== "lbs") lbsEl.value = show(lbs);
+  if (source !== "A") aEl.value = show(lbs == null ? null : lbsToGauge("Model A", wire, lbs));
+  if (source !== "PT1") ptEl.value = show(lbs == null ? null : lbsToGauge("PT-1", wire, lbs));
+  // flag Model A 5/32 readings outside the table's reliable range
+  const aVal = num(aEl.value);
+  const approx = wire === "5/32" && aVal != null && (aVal < 35 || aVal > 47);
+  $("#convNote").textContent = approx
+    ? "Model A 5/32 reading is outside the published table range — value is extrapolated."
+    : "Type any field to convert the others. lbs is the common reference.";
+}
+
+/* ============================================================
+   GAUGE TOGGLE (Model A / PT-1, app-wide)
+   ============================================================ */
+const PS_LOOS_FIELDS = [
+  ["upPortLoos", "uppers"], ["upStbdLoos", "uppers"],
+  ["loPortLoos", "lowers"], ["loStbdLoos", "lowers"],
+  ["diaPortLoos", "intermediates"], ["diaStbdLoos", "intermediates"]
+];
+
+function applyGaugeLabels() {
+  const g = activeGauge();
+  const sel = $("#gaugeSelect");
+  if (sel) sel.value = g;
+  $$(".ps-unit").forEach((e) => (e.textContent = gaugeUnit()));
+  const pg = $(".ps-gauge");
+  if (pg) pg.textContent = g;
+}
+
+function setGauge(g) {
+  const old = activeGauge();
+  if (g === old || !GAUGES.includes(g)) return;
+  // convert anything already typed into the log form to the new gauge
+  for (const [id, wire] of PS_LOOS_FIELDS) {
+    const el = $("#" + id);
+    if (!el || el.value.trim() === "") continue;
+    const c = convertReading(old, g, WIRE_SIZE[wire], el.value.trim());
+    el.value = c == null ? "" : c;
+  }
+  state.gauge = g;
+  save();
+  applyGaugeLabels();
+  renderAll();
+  toast("Gauge: " + g);
 }
 
 /* ============================================================
@@ -885,11 +987,29 @@ function bindEvents() {
     if (e.target.dataset.editlog) { editLog(e.target.dataset.editlog); switchView("log"); }
     else if (e.target.dataset.dellog) deleteLog(e.target.dataset.dellog);
   });
+
+  // gauge toggle (app-wide Model A / PT-1)
+  $("#gaugeSelect").addEventListener("change", (e) => setGauge(e.target.value));
+
+  // converter popup
+  $("#btnConvert").addEventListener("click", openConverter);
+  $("#convertClose").addEventListener("click", closeConverter);
+  $("#convertModal").addEventListener("click", (e) => {
+    if (e.target === $("#convertModal")) closeConverter();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !$("#convertModal").hidden) closeConverter();
+  });
+  $("#convWire").addEventListener("change", () => runConvert("lbs"));
+  $("#convLbs").addEventListener("input", () => runConvert("lbs"));
+  $("#convModelA").addEventListener("input", () => runConvert("A"));
+  $("#convPT1").addEventListener("input", () => runConvert("PT1"));
 }
 
 /* ---------- boot ---------- */
 document.addEventListener("DOMContentLoaded", () => {
   bindEvents();
+  applyGaugeLabels();
   renderAll();                 // instant render from localStorage
   $("#logDate").value = new Date().toISOString().slice(0, 10);
   showIdentity();
