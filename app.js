@@ -1215,16 +1215,11 @@ function renderDiagram() {
   const T = diagTensions();
   const prebend = diagInches("intermediates");
   const forestay = diagInches("forestay");
-  // mast leans toward the higher-tension upper side (front view)
-  let leanPx = 0;
-  if (isLog && T.upper.port.lbs != null && T.upper.stbd.lbs != null) {
-    leanPx = Math.max(-26, Math.min(26, (T.upper.port.lbs - T.upper.stbd.lbs) * 0.6));
-  }
 
   $("#diagLegend").innerHTML = diagLegend(T, isLog);
   $("#diagHost").innerHTML =
     `<figure class="diag-fig">${diagramSide(T, prebend, forestay)}<figcaption>Side — bow right (rake &amp; pre-bend exaggerated)</figcaption></figure>` +
-    `<figure class="diag-fig">${diagramFront(T, leanPx)}<figcaption>Front — looking aft from the bow${isLog ? " (per-side)" : ""}</figcaption></figure>`;
+    `<figure class="diag-fig">${diagramFront(T)}<figcaption>Front — looking aft from the bow${isLog ? " (per-side)" : ""}</figcaption></figure>`;
 }
 
 function diagLegend(T, isLog) {
@@ -1267,69 +1262,84 @@ function poly(pts, color, w) {
   return `<polyline points="${pts.map((p) => p.map((n) => n.toFixed(1)).join(",")).join(" ")}" fill="none" stroke="${color}" stroke-width="${w || 3}" stroke-linecap="round" stroke-linejoin="round"/>`;
 }
 
+// quadratic-bezier point at t (0..1)
+function qbez(p0, p1, p2, t) {
+  const u = 1 - t;
+  return [u * u * p0[0] + 2 * u * t * p1[0] + t * t * p2[0],
+          u * u * p0[1] + 2 * u * t * p1[1] + t * t * p2[1]];
+}
+
 function diagramSide(T, prebend, forestay) {
   const W = 340, H = 440, deckY = 345, waterY = 362;
-  const mastBaseX = 158, topY = 56;
+  const mastBaseX = 162, topY = 56;
   const rakePx = 34 + (forestay != null ? (forestay - 16) * 10 : 0);  // exaggerated rake
-  const topX = mastBaseX - rakePx;                                    // masthead leans aft (left)
-  const bendPx = (prebend != null ? prebend : 0) * 4.5;               // exaggerated forward bow
-  const midX = (mastBaseX + topX) / 2 + bendPx, midY = (deckY + topY) / 2;
+  const topX = mastBaseX - rakePx;                                    // masthead aft (left)
+  const bendPx = (prebend != null ? prebend : 0) * 4.5;              // exaggerated forward bow
+  const base = [mastBaseX, deckY], top = [topX, topY];
+  const ctrl = [(mastBaseX + topX) / 2 + bendPx, (deckY + topY) / 2];
+  const lowP = qbez(base, ctrl, top, 0.40);     // lower spreader, on the mast
+  const upP = qbez(base, ctrl, top, 0.64);      // upper spreader, on the mast
   const bowX = 300, bowDeckY = 343;
-  const cpX = 112, cpY = deckY;             // chainplate (aft of mast)
-  // spreader point along the mast chord (~55% up)
-  const spX = lerp(mastBaseX, topX, 0.55) + bendPx * 0.5, spY = lerp(deckY, topY, 0.55);
-  const loX = lerp(mastBaseX, topX, 0.42) + bendPx * 0.55, loY = lerp(deckY, topY, 0.42);
-
+  const fwdCP = [mastBaseX + 18, deckY];        // lowers -> forward chainplate hole (toward bow)
+  const aftCP = [mastBaseX - 22, deckY];        // intermediates -> aft chainplate hole
   const c = (id) => tensionColor(sideAvg(T[id]), T[id].size);
+  // diamonds (uppers) are athwartship: shown edge-on as the bend line just aft of the mast
+  const dOff = (p) => [p[0] - 7, p[1]];
+
   return `<svg viewBox="0 0 ${W} ${H}" class="diag-svg" role="img" aria-label="Side view">
     <line x1="12" y1="${waterY}" x2="${W - 12}" y2="${waterY}" stroke="#9fc3e0" stroke-width="2"/>
     <path d="M 48,${deckY + 2} L 292,${bowDeckY} C 312,${bowDeckY} 314,360 296,365 L 70,367 C 46,367 40,352 48,${deckY + 2} Z" fill="#eef2f6" stroke="#33424f" stroke-width="2"/>
-    <path d="M 150,367 L 168,367 L 162,392 L 156,392 Z" fill="#cdd6de" stroke="#33424f" stroke-width="1.5"/>
-    ${line(mastBaseX, deckY, 86, 330, "#5c6b76", 4)}  <!-- boom -->
+    <path d="M 152,367 L 172,367 L 166,392 L 158,392 Z" fill="#cdd6de" stroke="#33424f" stroke-width="1.5"/>
+    ${line(mastBaseX, deckY, 88, 330, "#5c6b76", 4)}
+    <!-- diamonds (uppers / pre-bend wire), edge-on just aft of the mast -->
+    <path d="M ${dOff(base)[0].toFixed(1)},${dOff(base)[1].toFixed(1)} Q ${dOff(ctrl)[0].toFixed(1)},${dOff(ctrl)[1].toFixed(1)} ${dOff(top)[0].toFixed(1)},${dOff(top)[1].toFixed(1)}" fill="none" stroke="${c("upper")}" stroke-width="3"/>
     <!-- mast: rake + pre-bend -->
-    <path d="M ${mastBaseX},${deckY} Q ${midX},${midY} ${topX},${topY}" fill="none" stroke="#2b3742" stroke-width="5"/>
+    <path d="M ${base[0].toFixed(1)},${base[1].toFixed(1)} Q ${ctrl[0].toFixed(1)},${ctrl[1].toFixed(1)} ${top[0].toFixed(1)},${top[1].toFixed(1)}" fill="none" stroke="#2b3742" stroke-width="5"/>
     <!-- forestay -->
     ${line(topX, topY, bowX, bowDeckY, "#7d8a94", 2)}
-    <!-- spreader (foreshortened) -->
-    ${line(spX, spY, spX - 14, spY + 4, "#5c6b76", 3)}
-    <!-- shrouds (swept aft to the chainplate) -->
-    ${line(topX, topY, cpX, cpY, c("upper"), 4)}
-    ${line(spX - 12, spY + 3, cpX + 6, cpY, c("inter"), 4)}
-    ${line(loX, loY, cpX + 12, cpY, c("lower"), 4)}
-    <circle cx="${cpX + 6}" cy="${cpY}" r="3" fill="#33424f"/>
+    <!-- spreaders (athwartship, foreshortened) -->
+    ${line(lowP[0], lowP[1], lowP[0] - 13, lowP[1] + 3, "#5c6b76", 3)}
+    ${line(upP[0], upP[1], upP[0] - 11, upP[1] + 3, "#5c6b76", 3)}
+    <!-- intermediates: mast @ upper spreader -> aft chainplate -->
+    ${line(upP[0], upP[1], aftCP[0], aftCP[1], c("inter"), 4)}
+    <!-- lowers: mast @ lower spreader -> forward chainplate -->
+    ${line(lowP[0], lowP[1], fwdCP[0], fwdCP[1], c("lower"), 4)}
+    <circle cx="${aftCP[0]}" cy="${aftCP[1]}" r="3" fill="#33424f"/>
+    <circle cx="${fwdCP[0]}" cy="${fwdCP[1]}" r="3" fill="#33424f"/>
     <text x="${topX - 4}" y="${topY - 6}" class="diag-t" text-anchor="end">masthead</text>
+    <text x="${bowX}" y="${bowDeckY - 8}" class="diag-t" text-anchor="middle">bow</text>
   </svg>`;
 }
 
-function diagramFront(T, leanPx) {
-  const W = 340, H = 440, deckY = 348, waterY = 362;
-  const cx = 170, topY = 52;
-  leanPx = leanPx || 0;
-  const topX = cx + leanPx;                 // masthead leans toward higher-tension side
-  // exaggerate hull asymmetry: starboard (viewer's left) sits higher
-  const tilt = 6;
-  const deckL = deckY - tilt, deckR = deckY + tilt;
-  const spY = 198, spLen = 78, lowY = 232;
-  const mastX = (y) => lerp(cx, topX, (deckY - y) / (deckY - topY));  // mast x at height y
-  const spX = mastX(spY);
-  const portTipX = spX + spLen, stbdTipX = spX - spLen, tipY = spY + 8;
-  const cpLX = 60, cpRX = 280;              // chainplates (stbd left, port right)
-  // right side = port, left side = stbd
+function diagramFront(T) {
+  const W = 340, H = 440, deckYb = 348, waterY = 362, topY = 50;
+  const cx = 170;
+  const tilt = 6;                                       // exaggerated hull asymmetry (stbd high)
+  const deckL = deckYb - tilt, deckR = deckYb + tilt;   // stbd=left higher, port=right lower
+  const hLow = 248, hUp = 150;                          // lower / upper spreader heights on mast
+  const spLow = 80, spUp = 60;                          // spreader half-lengths
+  const tipLowY = hLow + 4, tipUpY = hUp + 4;           // tips swept slightly down
+  const cpLX = 58, cpRX = 282;
   const c = (id, side) => tensionColor(T[id][side].lbs, T[id].size);
 
-  const sideShrouds = (cpX, deck, tipX, side) => `
-    ${poly([[cpX, deck], [tipX, tipY], [topX, topY]], c("upper", side), 4)}
-    ${line(cpX, deck, tipX, tipY, c("inter", side), 4)}
-    ${line(cpX, deck, mastX(lowY), lowY, c("lower", side), 4)}`;
+  // sign: +1 = port (viewer's right), -1 = stbd (viewer's left)
+  const sideRig = (sign, sd, cpX, deck) => {
+    const lowTipX = cx + sign * spLow, upTipX = cx + sign * spUp;
+    return `
+      ${line(cx, hLow, lowTipX, tipLowY, "#5c6b76", 3)}
+      ${line(cx, hUp, upTipX, tipUpY, "#5c6b76", 3)}
+      ${poly([[cx, deckYb], [lowTipX, tipLowY], [upTipX, tipUpY], [cx, topY]], c("upper", sd), 3.5)}
+      ${poly([[cx, hUp], [lowTipX, tipLowY], [cpX, deck]], c("inter", sd), 3.5)}
+      ${line(cx, hLow, cpX, deck, c("lower", sd), 3.5)}`;
+  };
 
   return `<svg viewBox="0 0 ${W} ${H}" class="diag-svg" role="img" aria-label="Front view">
     <line x1="12" y1="${waterY}" x2="${W - 12}" y2="${waterY}" stroke="#9fc3e0" stroke-width="2"/>
     <path d="M 40,${deckL} L 300,${deckR} C 286,382 200,392 170,392 C 140,392 54,382 40,${deckL} Z" fill="#eef2f6" stroke="#33424f" stroke-width="2"/>
-    ${line(cx, deckY, topX, topY, "#2b3742", 5)}
-    ${line(spX, spY, portTipX, tipY, "#5c6b76", 3)}
-    ${line(spX, spY, stbdTipX, tipY, "#5c6b76", 3)}
-    ${sideShrouds(cpRX, deckR, portTipX, "port")}
-    ${sideShrouds(cpLX, deckL, stbdTipX, "stbd")}
+    ${sideRig(1, "port", cpRX, deckR)}
+    ${sideRig(-1, "stbd", cpLX, deckL)}
+    <!-- mast: plumb (vertical) regardless of deck tilt -->
+    ${line(cx, deckYb, cx, topY, "#2b3742", 5)}
     <circle cx="${cpLX}" cy="${deckL}" r="3" fill="#33424f"/>
     <circle cx="${cpRX}" cy="${deckR}" r="3" fill="#33424f"/>
     <text x="${cpLX}" y="${deckL - 8}" class="diag-t" text-anchor="middle">Stbd</text>
