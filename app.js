@@ -418,7 +418,7 @@ let activeSetupId = null;
 function renderGrid() {
   const cfg = activeProfile().config;
   const setups = cfg.setups;
-  if (!setups.length) { $("#gridHost").innerHTML = '<p class="empty">No setups. Add one.</p>'; $("#setupTabs").innerHTML = ""; $("#setupNotes").innerHTML = ""; return; }
+  if (!setups.length) { $("#gridHost").innerHTML = '<p class="empty">No tunes. Add one.</p>'; $("#setupTabs").innerHTML = ""; $("#setupNotes").innerHTML = ""; return; }
   if (!setups.some((s) => s.id === activeSetupId)) activeSetupId = setups[0].id;
 
   // setup tabs
@@ -521,19 +521,21 @@ function renderSetupNotes(setup) {
       <h2 style="font-size:14px;margin:0;">${esc(setup.label)} — notes</h2>
       <div>
         <button class="sm" id="btnAddNote">+ Note</button>
-        <button class="sm danger" id="btnDelSetup">Delete this setup</button>
+        <button class="sm ghost" id="btnRenameSetup">Rename tune</button>
+        <button class="sm ghost" id="btnDupSetup">Duplicate tune</button>
+        <button class="sm danger" id="btnDelSetup">Delete this tune</button>
       </div>
     </div>
     ${notes.length ? `<ul class="notes-list">${notes.map((n, i) => `<li>${esc(n)} <button class="sm ghost" data-delnote="${i}" title="remove">✕</button></li>`).join("")}</ul>` : '<p class="muted">No notes.</p>'}`;
 }
 
 function addSetup() {
-  const label = prompt("Name for the new setup column (e.g. a sailor or a season):", "");
+  const label = prompt("Name for the new tune (e.g. a sailor or a season):", "");
   if (!label) return;
   const cfg = activeProfile().config;
   const setup = {
     id: uid(),
-    label,
+    label: label.trim(),
     base: { uppers: {}, lowers: {}, intermediates: {}, forestay: {} },
     byWind: {},
     notes: []
@@ -543,6 +545,41 @@ function addSetup() {
   activeSetupId = setup.id;
   save();
   renderGrid();
+  renderLogControls();
+}
+
+function renameSetup() {
+  const cfg = activeProfile().config;
+  const setup = cfg.setups.find((s) => s.id === activeSetupId);
+  if (!setup) return;
+  const label = prompt("Rename tune:", setup.label);
+  if (label == null) return;
+  const name = label.trim();
+  if (!name) return;
+  setup.label = name;
+  save();
+  renderGrid();
+  renderLogControls();
+  toast("Renamed to " + name);
+}
+
+function duplicateSetup() {
+  const cfg = activeProfile().config;
+  const setup = cfg.setups.find((s) => s.id === activeSetupId);
+  if (!setup) return;
+  const label = prompt("Name for the duplicate:", setup.label + " copy");
+  if (label == null) return;
+  const name = label.trim() || setup.label + " copy";
+  const copy = clone(setup);
+  copy.id = uid();
+  copy.label = name;
+  const i = cfg.setups.findIndex((s) => s.id === activeSetupId);
+  cfg.setups.splice(i + 1, 0, copy);
+  activeSetupId = copy.id;
+  save();
+  renderGrid();
+  renderLogControls();
+  toast("Duplicated as " + name);
 }
 
 /* ============================================================
@@ -990,11 +1027,15 @@ function bindEvents() {
     } else if (e.target.dataset.delnote != null) {
       const setup = activeProfile().config.setups.find((s) => s.id === activeSetupId);
       setup.notes.splice(+e.target.dataset.delnote, 1); save(); renderSetupNotes(setup);
+    } else if (e.target.id === "btnRenameSetup") {
+      renameSetup();
+    } else if (e.target.id === "btnDupSetup") {
+      duplicateSetup();
     } else if (e.target.id === "btnDelSetup") {
       const cfg = activeProfile().config;
-      if (cfg.setups.length <= 1) { alert("Keep at least one setup."); return; }
+      if (cfg.setups.length <= 1) { alert("Keep at least one tune."); return; }
       const setup = cfg.setups.find((s) => s.id === activeSetupId);
-      if (confirm(`Delete setup column “${setup.label}”?`)) {
+      if (confirm(`Delete tune “${setup.label}”?`)) {
         cfg.setups = cfg.setups.filter((s) => s.id !== activeSetupId);
         activeSetupId = cfg.setups[0].id;
         save(); renderGrid(); renderLogControls();
