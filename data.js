@@ -52,7 +52,7 @@ const REFERENCE_DATA = {
   hull: {
     asymmetry_in: 0.625,
     higherSide: "starboard",
-    note: "Legacy mold runs ~5/8 in higher to starboard. Tune to a centered masthead; expect uneven port/stbd turnbuckle counts. Tool should support per-side values."
+    note: "Legacy mold runs ~5/8 in higher to starboard. Tune to a centered masthead; expect uneven port/stbd turnbuckle counts."
   },
   setups: [
     {

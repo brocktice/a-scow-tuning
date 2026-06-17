@@ -358,7 +358,8 @@ details.ref summary { cursor: pointer; color: var(--muted); }
 
 /* Styled tuning card (grid printout) — hidden on screen, shown only when printing */
 #printCard { display: none; }
-.tcard { background:#f5f6f4; color:#11212f; max-width:880px; margin:0 auto; font-family:"Inter",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+.tcard { background:#f5f6f4; color:#11212f; max-width:880px; margin:0 auto; font-family:"Inter",system-ui,sans-serif; -webkit-font-smoothing:antialiased;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .tcard header { background:#0c2233; color:#eef3f6; padding:20px 26px 18px; display:flex; align-items:flex-end; justify-content:space-between; gap:16px; border-bottom:3px solid #f1c000; }
 .tcard .eyebrow { font-family:"Oswald",sans-serif; text-transform:uppercase; letter-spacing:.32em; font-size:11px; font-weight:500; color:#9fb6c6; margin:0 0 4px; }
 .tcard h1 { font-family:"Oswald",sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:.04em; font-size:32px; line-height:.95; margin:0; color:#eef3f6; }

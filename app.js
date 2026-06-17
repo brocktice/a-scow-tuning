@@ -1029,20 +1029,14 @@ function buildTuningCard() {
     }).join("");
   }).join("");
 
-  // pre-bend callout
-  const pb = cfg.prebend || {};
-  const pbText = [pb.measurement, pb.note].filter(Boolean).map(esc).join(" ");
-  const setupCallout = pbText
-    ? `<div class="setup"><span class="tag">Pre-bend</span><div class="sbody">${pbText}</div></div>`
-    : "";
-
   // notes: per-tune notes + global notes
   const noteItems = [];
   setups.forEach((s) => (s.notes || []).forEach((n) => noteItems.push(`<li><b>${esc(s.label)}:</b> ${esc(n)}</li>`)));
   (cfg.globalNotes || []).forEach((n) => noteItems.push(`<li>${esc(n)}</li>`));
   const notesBlock = noteItems.length ? `<div class="notes"><h3>Notes</h3><ul>${noteItems.join("")}</ul></div>` : "";
 
-  const hullBlock = cfg.hull?.note ? `<div class="hullnote">${esc(cfg.hull.note)}</div>` : "";
+  const hullNote = (cfg.hull?.note || "").replace(/\s*Tool should support per-side values\.?/i, "").trim();
+  const hullBlock = hullNote ? `<div class="hullnote">${esc(hullNote)}</div>` : "";
   const termBlock = cfg.terminology?.northSailsWarning
     ? `<div class="terminote"><b>Terminology:</b> ${esc(cfg.terminology.northSailsWarning)}</div>` : "";
 
@@ -1060,7 +1054,6 @@ function buildTuningCard() {
       </div>
     </header>
     <div class="wrap">
-      ${setupCallout}
       <div class="section-label">Base Setting <span class="sub">(rest setup)</span></div>
       <table class="base"><thead>${baseHead}</thead><tbody>${baseRows}</tbody></table>
       <div class="section-label">By Wind Range <span class="sub">(adjust from base)</span></div>
