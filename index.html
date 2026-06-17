@@ -34,6 +34,7 @@
     <button data-view="grid" class="active">Tuning Grid</button>
     <button data-view="log">Tuning Log</button>
     <button data-view="analysis">Analysis</button>
+    <button data-view="diagram">Rig Diagram</button>
   </nav>
 
   <main>
@@ -163,6 +164,30 @@
         </div>
         <p class="hint">Log entries grouped by wind range so you can compare what you actually sailed against the reference grid and spot drift.</p>
         <div id="analysisHost"></div>
+      </div>
+    </section>
+
+    <!-- ===== RIG DIAGRAM (experimental) ===== -->
+    <section id="view-diagram" class="view">
+      <div class="card">
+        <div class="flex-between">
+          <div>
+            <h2>Rig Diagram <span class="pill" style="vertical-align:middle;">experimental</span></h2>
+            <p class="hint">Side &amp; front schematic of the rig. Mast rake and pre-bend are exaggerated for visibility. Shrouds are colored by tension. Breaking strengths are approximate — adjust in code if needed.</p>
+          </div>
+        </div>
+        <div class="row" style="align-items:flex-end; gap:14px;">
+          <div class="field"><label>Tune</label><select id="diagTune"></select></div>
+          <div class="field"><label>Wind range</label><select id="diagRange"></select></div>
+          <div class="field"><label>Color by</label>
+            <select id="diagMode">
+              <option value="pct">% of breaking strength</option>
+              <option value="lbs">Pounds (absolute)</option>
+            </select>
+          </div>
+        </div>
+        <div id="diagLegend" style="margin-top:12px;"></div>
+        <div id="diagHost" class="diagram-host"></div>
       </div>
     </section>
 

@@ -1101,6 +1101,181 @@ function renderReference() {
 }
 
 /* ============================================================
+   RIG DIAGRAM (experimental spike)
+   Side + front schematic, shrouds colored by tension.
+   ============================================================ */
+// approximate 1x19 316 stainless breaking strengths (lbs), by wire size
+const WIRE_BREAK = { "1/8": 2100, "5/32": 3300 };
+// shrouds in North Sails naming, mapped to internal data keys
+const DIAG_SHROUDS = [
+  { id: "upper", label: "Upper", key: "intermediates" },
+  { id: "inter", label: "Intermediate", key: "uppers" },
+  { id: "lower", label: "Lower", key: "lowers" }
+];
+const diagState = { tuneId: null, rangeId: null, mode: "pct" };
+const LBS_FULLSCALE = 1000;  // pounds mapped to the top of the color scale
+
+const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
+// low tension -> green, high -> red
+function tensionColor(lbs, size) {
+  if (lbs == null || isNaN(lbs)) return "#9aa6ad";
+  let t;
+  if (diagState.mode === "pct") {
+    const brk = WIRE_BREAK[size] || 3000;
+    t = clamp01((lbs / brk) / 0.30);     // 0–30% of breaking spans the scale (working range)
+  } else {
+    t = clamp01(lbs / LBS_FULLSCALE);
+  }
+  const hue = 120 * (1 - t);             // 120=green -> 0=red
+  return `hsl(${Math.round(hue)}, 78%, 44%)`;
+}
+
+function diagTune() {
+  const setups = activeProfile().config.setups;
+  return setups.find((s) => s.id === diagState.tuneId) || setups[0];
+}
+
+// {lbs, size, frac} for a shroud at the selected range
+function shroudTension(sh) {
+  const cfg = activeProfile().config;
+  const size = WIRE_SIZE[sh.key];
+  const cell = resolveCell(diagTune(), diagState.rangeId, sh.key);
+  const lbs = cell && cell.lbs != null && cell.lbs !== "" ? +cell.lbs : null;
+  return { lbs, size };
+}
+function inchVal(key) {
+  const cell = resolveCell(diagTune(), diagState.rangeId, key);
+  const v = cell && cell.in != null && cell.in !== "" ? parseFloat(cell.in) : null;
+  return isNaN(v) ? null : v;
+}
+
+function renderDiagram() {
+  const cfg = activeProfile().config;
+  const setups = cfg.setups || [];
+  if (!setups.length) { $("#diagHost").innerHTML = '<p class="empty">No tunes.</p>'; return; }
+  if (!setups.some((s) => s.id === diagState.tuneId)) diagState.tuneId = (setups.find((s) => s.id === activeSetupId) || setups[0]).id;
+  const ranges = cfg.windRanges || [];
+  if (!ranges.some((r) => r.id === diagState.rangeId)) diagState.rangeId = ranges[0]?.id;
+
+  $("#diagTune").innerHTML = setups.map((s) => `<option value="${s.id}" ${s.id === diagState.tuneId ? "selected" : ""}>${esc(s.label)}</option>`).join("");
+  $("#diagRange").innerHTML = ranges.map((r) => `<option value="${r.id}" ${r.id === diagState.rangeId ? "selected" : ""}>${r.knots[0]}–${r.knots[1]} kn (${r.band})</option>`).join("");
+  $("#diagMode").value = diagState.mode;
+
+  // tension per shroud
+  const T = {};
+  DIAG_SHROUDS.forEach((sh) => (T[sh.id] = shroudTension(sh)));
+  const prebend = inchVal("intermediates");   // pre-bend inches (key intermediates)
+  const forestay = inchVal("forestay");       // rake reference
+
+  $("#diagLegend").innerHTML = diagLegend(T);
+  $("#diagHost").innerHTML =
+    `<figure class="diag-fig">${diagramSide(T, prebend, forestay)}<figcaption>Side — bow right (rake &amp; pre-bend exaggerated)</figcaption></figure>` +
+    `<figure class="diag-fig">${diagramFront(T)}<figcaption>Front — looking aft from the bow</figcaption></figure>`;
+}
+
+function diagLegend(T) {
+  const stops = diagState.mode === "pct"
+    ? "hsl(120,78%,44%) 0%, hsl(60,78%,44%) 50%, hsl(0,78%,44%) 100%"
+    : "hsl(120,78%,44%) 0%, hsl(60,78%,44%) 50%, hsl(0,78%,44%) 100%";
+  const ticks = diagState.mode === "pct"
+    ? ["0%", "7.5%", "15%", "22.5%", "30%+"]
+    : ["0", "250", "500", "750", "1000+"].map((x) => x + (x === "0" ? " lb" : ""));
+  const rows = DIAG_SHROUDS.map((sh) => {
+    const t = T[sh.id];
+    const pct = t.lbs == null ? null : Math.round((t.lbs / (WIRE_BREAK[t.size] || 3000)) * 100);
+    const val = t.lbs == null ? "—" : `${t.lbs} lb${pct != null ? ` · ${pct}%` : ""} <span class="muted">(${t.size}")</span>`;
+    return `<tr><td><span class="diag-sw" style="background:${tensionColor(t.lbs, t.size)}"></span>${sh.label}</td><td>${val}</td></tr>`;
+  }).join("");
+  return `<div class="diag-legend">
+    <div class="diag-scale">
+      <div class="diag-bar" style="background:linear-gradient(90deg, ${stops})"></div>
+      <div class="diag-ticks">${ticks.map((t) => `<span>${t}</span>`).join("")}</div>
+      <div class="diag-scale-label">${diagState.mode === "pct" ? "tension as % of breaking strength" : "tension in pounds"}</div>
+    </div>
+    <table class="diag-tbl">${rows}</table>
+  </div>`;
+}
+
+// ----- geometry helpers -----
+const lerp = (a, b, t) => a + (b - a) * t;
+function line(x1, y1, x2, y2, color, w) {
+  return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${color}" stroke-width="${w || 3}" stroke-linecap="round"/>`;
+}
+function poly(pts, color, w) {
+  return `<polyline points="${pts.map((p) => p.map((n) => n.toFixed(1)).join(",")).join(" ")}" fill="none" stroke="${color}" stroke-width="${w || 3}" stroke-linecap="round" stroke-linejoin="round"/>`;
+}
+
+function diagramSide(T, prebend, forestay) {
+  const W = 340, H = 440, deckY = 345, waterY = 362;
+  const mastBaseX = 158, topY = 56;
+  const rakePx = 34 + (forestay != null ? (forestay - 16) * 10 : 0);  // exaggerated rake
+  const topX = mastBaseX - rakePx;                                    // masthead leans aft (left)
+  const bendPx = (prebend != null ? prebend : 0) * 4.5;               // exaggerated forward bow
+  const midX = (mastBaseX + topX) / 2 + bendPx, midY = (deckY + topY) / 2;
+  const bowX = 300, bowDeckY = 343;
+  const cpX = 112, cpY = deckY;             // chainplate (aft of mast)
+  // spreader point along the mast chord (~55% up)
+  const spX = lerp(mastBaseX, topX, 0.55) + bendPx * 0.5, spY = lerp(deckY, topY, 0.55);
+  const loX = lerp(mastBaseX, topX, 0.42) + bendPx * 0.55, loY = lerp(deckY, topY, 0.42);
+
+  const c = (id) => tensionColor(T[id].lbs, T[id].size);
+  return `<svg viewBox="0 0 ${W} ${H}" class="diag-svg" role="img" aria-label="Side view">
+    <line x1="12" y1="${waterY}" x2="${W - 12}" y2="${waterY}" stroke="#9fc3e0" stroke-width="2"/>
+    <path d="M 48,${deckY + 2} L 292,${bowDeckY} C 312,${bowDeckY} 314,360 296,365 L 70,367 C 46,367 40,352 48,${deckY + 2} Z" fill="#eef2f6" stroke="#33424f" stroke-width="2"/>
+    <path d="M 150,367 L 168,367 L 162,392 L 156,392 Z" fill="#cdd6de" stroke="#33424f" stroke-width="1.5"/>
+    ${line(mastBaseX, deckY, 86, 330, "#5c6b76", 4)}  <!-- boom -->
+    <!-- mast: rake + pre-bend -->
+    <path d="M ${mastBaseX},${deckY} Q ${midX},${midY} ${topX},${topY}" fill="none" stroke="#2b3742" stroke-width="5"/>
+    <!-- forestay -->
+    ${line(topX, topY, bowX, bowDeckY, "#7d8a94", 2)}
+    <!-- spreader (foreshortened) -->
+    ${line(spX, spY, spX - 14, spY + 4, "#5c6b76", 3)}
+    <!-- shrouds (swept aft to the chainplate) -->
+    ${line(topX, topY, cpX, cpY, c("upper"), 4)}
+    ${line(spX - 12, spY + 3, cpX + 6, cpY, c("inter"), 4)}
+    ${line(loX, loY, cpX + 12, cpY, c("lower"), 4)}
+    <circle cx="${cpX + 6}" cy="${cpY}" r="3" fill="#33424f"/>
+    <text x="${topX - 4}" y="${topY - 6}" class="diag-t" text-anchor="end">masthead</text>
+  </svg>`;
+}
+
+function diagramFront(T) {
+  const W = 340, H = 440, deckY = 348, waterY = 362;
+  const cx = 170, topY = 52;
+  // exaggerate hull asymmetry: starboard (viewer's left) sits higher
+  const tilt = 6;
+  const deckL = deckY - tilt, deckR = deckY + tilt;
+  const spY = 198, spLen = 78;
+  const portTipX = cx + spLen, stbdTipX = cx - spLen, tipY = spY + 8;
+  const cpLX = 60, cpRX = 280;             // chainplates (stbd left, port right)
+  const lowY = 232;                         // lower attach on mast, below spreaders
+  const c = (id) => tensionColor(T[id].lbs, T[id].size);
+
+  const sideShrouds = (cpX, tipX, sign) => `
+    ${poly([[cpX, sign > 0 ? deckR : deckL], [tipX, tipY], [cx, topY]], c("upper"), 4)}
+    ${line(cpX + sign * -6, (sign > 0 ? deckR : deckL), tipX, tipY, c("inter"), 4)}
+    ${line(cpX + sign * -12, (sign > 0 ? deckR : deckL), cx - sign * 2, lowY, c("lower"), 4)}`;
+
+  return `<svg viewBox="0 0 ${W} ${H}" class="diag-svg" role="img" aria-label="Front view">
+    <line x1="12" y1="${waterY}" x2="${W - 12}" y2="${waterY}" stroke="#9fc3e0" stroke-width="2"/>
+    <!-- beamy scow hull (tilted to show asymmetry) -->
+    <path d="M 40,${deckL} L 300,${deckR} C 286,382 200,392 170,392 C 140,392 54,382 40,${deckL} Z" fill="#eef2f6" stroke="#33424f" stroke-width="2"/>
+    <!-- mast -->
+    ${line(cx, deckY, cx, topY, "#2b3742", 5)}
+    <!-- spreaders (swept slightly down) -->
+    ${line(cx, spY, portTipX, tipY, "#5c6b76", 3)}
+    ${line(cx, spY, stbdTipX, tipY, "#5c6b76", 3)}
+    <!-- shrouds each side -->
+    ${sideShrouds(cpRX, portTipX, 1)}
+    ${sideShrouds(cpLX, stbdTipX, -1)}
+    <circle cx="${cpLX}" cy="${deckL}" r="3" fill="#33424f"/>
+    <circle cx="${cpRX}" cy="${deckR}" r="3" fill="#33424f"/>
+    <text x="${cpLX}" y="${deckL - 8}" class="diag-t" text-anchor="middle">Stbd</text>
+    <text x="${cpRX}" y="${deckR - 8}" class="diag-t" text-anchor="middle">Port</text>
+  </svg>`;
+}
+
+/* ============================================================
    CONVERTER (popup)
    ============================================================ */
 function openConverter() {
@@ -1174,6 +1349,7 @@ function renderAll() {
   renderLogList();
   renderAnalysis();
   renderReference();
+  renderDiagram();
 }
 
 function switchView(name) {
@@ -1244,6 +1420,11 @@ function bindEvents() {
     if (e.target.dataset.editlog) { editLog(e.target.dataset.editlog); switchView("log"); }
     else if (e.target.dataset.dellog) deleteLog(e.target.dataset.dellog);
   });
+
+  // rig diagram controls
+  $("#diagTune").addEventListener("change", (e) => { diagState.tuneId = e.target.value; renderDiagram(); });
+  $("#diagRange").addEventListener("change", (e) => { diagState.rangeId = e.target.value; renderDiagram(); });
+  $("#diagMode").addEventListener("change", (e) => { diagState.mode = e.target.value; renderDiagram(); });
 
   // gauge toggle (app-wide Model A / PT-1)
   $("#gaugeSelect").addEventListener("change", (e) => setGauge(e.target.value));

@@ -355,6 +355,21 @@ details.ref summary { cursor: pointer; color: var(--muted); }
   .settings-grid { grid-template-columns: 1fr; }
 }
 
+/* ===== Rig diagram ===== */
+.diagram-host { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 14px; }
+.diag-fig { margin: 0; flex: 1 1 300px; min-width: 280px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px; }
+.diag-fig figcaption { text-align: center; color: var(--muted); font-size: 12px; margin-top: 4px; }
+.diag-svg { width: 100%; height: auto; display: block; background: #f6f8fa; border-radius: 6px; }
+.diag-svg .diag-t { font: 10px -apple-system, sans-serif; fill: #5c6b76; }
+.diag-legend { display: flex; gap: 22px; flex-wrap: wrap; align-items: center; }
+.diag-scale { min-width: 220px; }
+.diag-bar { height: 12px; border-radius: 6px; border: 1px solid var(--line); }
+.diag-ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 2px; }
+.diag-scale-label { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.diag-tbl { border-collapse: collapse; font-size: 13px; }
+.diag-tbl td { padding: 2px 10px 2px 0; }
+.diag-sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 7px; vertical-align: -1px; }
+
 /* ===== Print ===== */
 .print-only { display: none; }
 .print-title { font-size: 18px; font-weight: 700; }
