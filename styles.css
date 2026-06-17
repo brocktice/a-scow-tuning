@@ -349,3 +349,52 @@ details.ref summary { cursor: pointer; color: var(--muted); }
 @media (max-width: 380px) {
   .settings-grid { grid-template-columns: 1fr; }
 }
+
+/* ===== Print ===== */
+.print-only { display: none; }
+.print-title { font-size: 18px; font-weight: 700; }
+.print-meta { font-size: 12px; color: #444; margin: 2px 0 12px; }
+.hdr-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+@media print {
+  @page { size: landscape; margin: 1cm; }
+  body { background: #fff !important; color: #000 !important; }
+  header.app, nav.tabs, .toast, .modal-overlay, #gridWarnings,
+  .hdr-actions, details.ref, .sync, .setup-tabs .tab-actions,
+  button { display: none !important; }
+  .print-only { display: block !important; }
+
+  .view { display: none !important; }
+  body[data-print="grid"] #view-grid,
+  body[data-print="log"] #view-log,
+  body[data-print="analysis"] #view-analysis { display: block !important; }
+  /* logs: print the logbook only, not the new-entry form */
+  body[data-print="log"] #view-log > .card:first-child { display: none !important; }
+
+  .card { border: none !important; box-shadow: none !important; background: #fff !important; padding: 0 !important; margin: 0 0 10px !important; }
+  h1, h2, h3, h4 { color: #000 !important; }
+  .hint, .muted, .cell-sub { color: #333 !important; }
+  a { color: #000 !important; text-decoration: none; }
+
+  .grid-wrap { overflow: visible !important; }
+  table.grid { border-collapse: collapse !important; width: 100% !important; font-size: 10px !important; }
+  table.grid th, table.grid td {
+    border: 1px solid #999 !important; color: #000 !important;
+    background: #fff !important; padding: 3px 4px !important; vertical-align: top;
+  }
+  /* show input values as plain text */
+  input, select, textarea {
+    border: none !important; background: transparent !important; color: #000 !important;
+    padding: 0 !important; font-size: 10px !important; width: auto !important;
+    -webkit-appearance: none; appearance: none;
+  }
+  .cell-edit, .cell-edit label { color: #000 !important; }
+  .pill { border: 1px solid #999 !important; color: #000 !important; background: #fff !important; }
+
+  /* setup tabs: print only the active tune's name, as plain text */
+  .setup-tabs button { display: none !important; }
+  .setup-tabs button.active {
+    display: inline !important; background: none !important; border: none !important;
+    color: #000 !important; font-weight: 700; padding: 0 !important;
+  }
+}

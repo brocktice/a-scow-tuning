@@ -34,6 +34,7 @@
   </nav>
 
   <main>
+    <div id="printHeader" class="print-only"></div>
     <!-- ===== TUNING GRID ===== -->
     <section id="view-grid" class="view active">
       <div class="card">
@@ -42,7 +43,10 @@
             <h2>Tuning Grid</h2>
             <p class="hint">Reference settings by wind range. Edit cells inline; changes save to the active boat profile automatically. <strong>turns</strong> are counted from each tune's base.</p>
           </div>
-          <button id="btnAddSetup" class="sm">+ Add tune</button>
+          <div class="hdr-actions">
+            <button id="btnPrintGrid" class="sm ghost" title="Print the tuning grid">🖨 Print</button>
+            <button id="btnAddSetup" class="sm">+ Add tune</button>
+          </div>
         </div>
         <div id="gridWarnings"></div>
         <div class="setup-tabs" id="setupTabs"></div>
@@ -138,7 +142,10 @@
       <div class="card">
         <div class="flex-between">
           <h2>Logbook</h2>
-          <input type="text" id="logSearch" placeholder="Filter entries..." style="max-width:240px;" />
+          <div class="hdr-actions">
+            <input type="text" id="logSearch" placeholder="Filter entries..." style="max-width:240px;" />
+            <button id="btnPrintLog" class="sm ghost" title="Print the logbook">🖨 Print</button>
+          </div>
         </div>
         <div id="logList"></div>
       </div>
@@ -147,7 +154,10 @@
     <!-- ===== ANALYSIS ===== -->
     <section id="view-analysis" class="view">
       <div class="card">
-        <h2>Tuning Over Time</h2>
+        <div class="flex-between">
+          <h2>Tuning Over Time</h2>
+          <button id="btnPrintAnalysis" class="sm ghost" title="Print the analysis">🖨 Print</button>
+        </div>
         <p class="hint">Log entries grouped by wind range so you can compare what you actually sailed against the reference grid and spot drift.</p>
         <div id="analysisHost"></div>
       </div>

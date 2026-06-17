@@ -926,6 +926,28 @@ function renderAnalysis() {
 }
 
 /* ============================================================
+   PRINT
+   ============================================================ */
+function printView(view) {
+  // make sure the target view is the one rendered, then print it
+  switchView(view);
+  const boat = activeProfile()?.name || "";
+  const titles = { grid: "Tuning Grid", log: "Tuning Logbook", analysis: "Tuning Over Time" };
+  let sub = "";
+  if (view === "grid") {
+    const setup = activeProfile().config.setups.find((s) => s.id === activeSetupId);
+    sub = setup ? ` — ${setup.label}` : "";
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  $("#printHeader").innerHTML =
+    `<div class="print-title">${esc(boat)} · ${esc(titles[view] || "")}${esc(sub)}</div>` +
+    `<div class="print-meta">Gauge: ${esc(activeGauge())} · Printed ${esc(today)}</div>`;
+  document.body.dataset.print = view;
+  // let the DOM settle (view switch + header) before invoking the dialog
+  setTimeout(() => window.print(), 60);
+}
+
+/* ============================================================
    REFERENCE (collapsible on the grid page)
    ============================================================ */
 function renderReference() {
@@ -1048,6 +1070,13 @@ function bindEvents() {
     if (e.target.matches("input[data-cell]")) commitCellEdit(e.target);
   });
   $("#btnAddSetup").addEventListener("click", addSetup);
+
+  // print
+  $("#btnPrintGrid").addEventListener("click", () => printView("grid"));
+  $("#btnPrintLog").addEventListener("click", () => printView("log"));
+  $("#btnPrintAnalysis").addEventListener("click", () => printView("analysis"));
+  window.addEventListener("afterprint", () => { delete document.body.dataset.print; });
+
   $("#setupNotes").addEventListener("click", (e) => {
     if (e.target.id === "btnAddNote") {
       const setup = activeProfile().config.setups.find((s) => s.id === activeSetupId);
