@@ -1281,7 +1281,7 @@ function diagramSide(T, prebend, forestay) {
   const ctrl = [(mastBaseX + topX) / 2 + bendPx, (deckY + topY) / 2];
   const lowP = qbez(base, ctrl, top, 0.40);     // lower spreader, on the mast
   const upP = qbez(base, ctrl, top, 0.64);      // upper spreader, on the mast
-  const bowX = 322, bowDeckY = 334;
+  const bowX = 308, bowDeckY = 338;
   const fwdCP = [mastBaseX + 18, deckY];        // lowers -> forward chainplate hole (toward bow)
   const aftCP = [mastBaseX - 22, deckY];        // intermediates -> aft chainplate hole
   const c = (id) => tensionColor(sideAvg(T[id]), T[id].size);
@@ -1307,15 +1307,29 @@ function diagramSide(T, prebend, forestay) {
     <line x1="${lblX.toFixed(1)}" y1="${lblY.toFixed(1)}" x2="${curveMid[0].toFixed(1)}" y2="${curveMid[1].toFixed(1)}" stroke="#c0392b" stroke-width="1.5" marker-end="url(#pbArrow)"/>
     <text x="${(lblX + 4).toFixed(1)}" y="${(lblY + 4).toFixed(1)}" class="diag-t" text-anchor="start" fill="#c0392b">pre-bend ${prebend}″</text>`;
 
-  // Rake measurement: forestay pin sits above the bow deck plate; distance = rake (in).
+  // Rake measurement: the forestay adjuster runs from the bow deck plate up to the
+  // pin, ALONG the forestay. The dimension is parallel to the stay with extension &
+  // dimension lines and arrows. pinLen exaggerated so the change between settings shows.
   const fs = forestay != null ? forestay : 16;
-  const pinPx = Math.max(8, 16 + (fs - 15.5) * 14);   // exaggerated so the change is visible
-  const pinY = bowDeckY - pinPx;
+  const flen = Math.hypot(topX - bowX, topY - bowDeckY) || 1;
+  const su = [(topX - bowX) / flen, (topY - bowDeckY) / flen];   // unit vector up the stay
+  const nrm = [-su[1], su[0]];                                    // outboard (forward) normal
+  const pinLen = Math.max(12, 16 + (fs - 15.5) * 14);
+  const pin = [bowX + su[0] * pinLen, bowDeckY + su[1] * pinLen];
+  const off = 12, RK = "#1f6fb2";
+  const A2 = [bowX + nrm[0] * off, bowDeckY + nrm[1] * off];      // dim line, deck end
+  const B2 = [pin[0] + nrm[0] * off, pin[1] + nrm[1] * off];      // dim line, pin end
+  const Ae = [bowX + nrm[0] * (off + 5), bowDeckY + nrm[1] * (off + 5)];
+  const Be = [pin[0] + nrm[0] * (off + 5), pin[1] + nrm[1] * (off + 5)];
+  const mid = [(A2[0] + B2[0]) / 2 + nrm[0] * 11, (A2[1] + B2[1]) / 2 + nrm[1] * 11];
+  const ang = Math.atan2(A2[1] - B2[1], A2[0] - B2[0]) * 180 / Math.PI;  // read down the stay
   const rakeMetric = `
-    <line x1="${bowX - 7}" y1="${bowDeckY}" x2="${bowX + 7}" y2="${bowDeckY}" stroke="#33424f" stroke-width="2.5"/>
-    <line x1="${bowX}" y1="${bowDeckY}" x2="${bowX}" y2="${pinY.toFixed(1)}" stroke="#1f6fb2" stroke-width="1.5" marker-start="url(#rkArrow)" marker-end="url(#rkArrow)"/>
-    <circle cx="${bowX}" cy="${pinY.toFixed(1)}" r="2.5" fill="#1f6fb2"/>
-    <text x="${bowX - 11}" y="${(bowDeckY - pinPx / 2 + 3).toFixed(1)}" class="diag-t" text-anchor="end" fill="#1f6fb2">rake ${fs}″</text>`;
+    <line x1="${(bowX - 6).toFixed(1)}" y1="${bowDeckY}" x2="${(bowX + 6).toFixed(1)}" y2="${bowDeckY}" stroke="#33424f" stroke-width="2.5"/>
+    <circle cx="${pin[0].toFixed(1)}" cy="${pin[1].toFixed(1)}" r="2.3" fill="${RK}"/>
+    <line x1="${bowX}" y1="${bowDeckY}" x2="${Ae[0].toFixed(1)}" y2="${Ae[1].toFixed(1)}" stroke="${RK}" stroke-width="1"/>
+    <line x1="${pin[0].toFixed(1)}" y1="${pin[1].toFixed(1)}" x2="${Be[0].toFixed(1)}" y2="${Be[1].toFixed(1)}" stroke="${RK}" stroke-width="1"/>
+    <line x1="${A2[0].toFixed(1)}" y1="${A2[1].toFixed(1)}" x2="${B2[0].toFixed(1)}" y2="${B2[1].toFixed(1)}" stroke="${RK}" stroke-width="1.2" marker-start="url(#rkArrow)" marker-end="url(#rkArrow)"/>
+    <text x="${mid[0].toFixed(1)}" y="${mid[1].toFixed(1)}" class="diag-t" text-anchor="middle" fill="${RK}" transform="rotate(${ang.toFixed(1)} ${mid[0].toFixed(1)} ${mid[1].toFixed(1)})">rake ${fs}″</text>`;
 
   return `<svg viewBox="0 0 ${W} ${H}" class="diag-svg" role="img" aria-label="Side view">
     <defs>
@@ -1325,19 +1339,20 @@ function diagramSide(T, prebend, forestay) {
         <path d="M 0,1 L 9,5 L 0,9 z" fill="#1f6fb2"/></marker>
     </defs>
     <line x1="12" y1="${waterY}" x2="${W - 12}" y2="${waterY}" stroke="#9fc3e0" stroke-width="2"/>
-    <!-- foils -->
-    <path d="M 222,353 L 230,353 L 226,406 L 222,406 Z" fill="#cdd6de" stroke="#33424f" stroke-width="1.5"/>
-    <path d="M 64,353 L 72,353 L 69,388 L 66,388 Z" fill="#cdd6de" stroke="#33424f" stroke-width="1.5"/>
-    <!-- hull: long, low scow; bow upswept (right), blunt transom (left), flat bottom -->
-    <path d="M 46,344 C 110,343 235,342 ${bowX},${bowDeckY} C 331,337 331,346 320,352 C 300,357 230,357 170,357 C 112,357 64,357 54,356 C 47,355 44,350 46,344 Z" fill="#eef2f6" stroke="#33424f" stroke-width="2"/>
+    <!-- foils: centerboard near the mast, rudder at the stern -->
+    <path d="M 162,356 L 173,356 L 168,407 L 164,407 Z" fill="#cdd6de" stroke="#33424f" stroke-width="1.5"/>
+    <path d="M 60,355 L 70,355 L 67,388 L 64,388 Z" fill="#cdd6de" stroke="#33424f" stroke-width="1.5"/>
+    <!-- hull: long low scow; fine pointed bow overhang (right), blunt raked transom
+         (left), flat rockered bottom -->
+    <path d="M 46,344 C 120,343 228,341 ${bowX},${bowDeckY} C 304,343 298,348 290,350 C 238,358 150,359 96,358 C 72,358 56,358 50,355 C 47,353 45,349 46,344 Z" fill="#eef2f6" stroke="#33424f" stroke-width="2"/>
     <!-- boom (horizontal at light air, rotates aft-down with rake) -->
     ${line(goosX, goosY, boomEnd[0], boomEnd[1], "#5c6b76", 4)}
     <!-- diamonds (uppers / pre-bend wire), edge-on just aft of the mast -->
     <path d="M ${dOff(base)[0].toFixed(1)},${dOff(base)[1].toFixed(1)} Q ${dOff(ctrl)[0].toFixed(1)},${dOff(ctrl)[1].toFixed(1)} ${dOff(top)[0].toFixed(1)},${dOff(top)[1].toFixed(1)}" fill="none" stroke="${c("upper")}" stroke-width="3"/>
     <!-- mast: rake + pre-bend -->
     <path d="M ${base[0].toFixed(1)},${base[1].toFixed(1)} Q ${ctrl[0].toFixed(1)},${ctrl[1].toFixed(1)} ${top[0].toFixed(1)},${top[1].toFixed(1)}" fill="none" stroke="#2b3742" stroke-width="5"/>
-    <!-- forestay (to the pin above the bow deck plate) -->
-    ${line(topX, topY, bowX, pinY, "#7d8a94", 2)}
+    <!-- forestay (masthead to the bow deck plate; pin marked along it) -->
+    ${line(topX, topY, bowX, bowDeckY, "#7d8a94", 2)}
     <!-- spreaders (athwartship, foreshortened) -->
     ${line(lowP[0], lowP[1], lowP[0] - 13, lowP[1] + 3, "#5c6b76", 3)}
     ${line(upP[0], upP[1], upP[0] - 11, upP[1] + 3, "#5c6b76", 3)}
