@@ -926,25 +926,148 @@ function renderAnalysis() {
 }
 
 /* ============================================================
-   PRINT
+   PRINT — log & analysis use the on-screen view; the grid prints
+   as a styled "tuning card" (see buildTuningCard).
    ============================================================ */
 function printView(view) {
-  // make sure the target view is the one rendered, then print it
   switchView(view);
   const boat = activeProfile()?.name || "";
-  const titles = { grid: "Tuning Grid", log: "Tuning Logbook", analysis: "Tuning Over Time" };
-  let sub = "";
-  if (view === "grid") {
-    const setup = activeProfile().config.setups.find((s) => s.id === activeSetupId);
-    sub = setup ? ` — ${setup.label}` : "";
-  }
+  const titles = { log: "Tuning Logbook", analysis: "Tuning Over Time" };
   const today = new Date().toISOString().slice(0, 10);
   $("#printHeader").innerHTML =
-    `<div class="print-title">${esc(boat)} · ${esc(titles[view] || "")}${esc(sub)}</div>` +
+    `<div class="print-title">${esc(boat)} · ${esc(titles[view] || "")}</div>` +
     `<div class="print-meta">Gauge: ${esc(activeGauge())} · Printed ${esc(today)}</div>`;
   document.body.dataset.print = view;
-  // let the DOM settle (view switch + header) before invoking the dialog
   setTimeout(() => window.print(), 60);
+}
+
+function printGridCard() {
+  $("#printCard").innerHTML = buildTuningCard();
+  document.body.dataset.print = "card";
+  setTimeout(() => window.print(), 60);
+}
+
+// Render the active boat's grid as a print-ready tuning card.
+function buildTuningCard() {
+  const prof = activeProfile();
+  const cfg = prof.config;
+  const setups = cfg.setups || [];
+  const ranges = cfg.windRanges || [];
+  const today = new Date().toISOString().slice(0, 10);
+  const bandClass = { light: "r-light", medium: "r-med", heavy: "r-heavy" };
+
+  // rows shown per range / in base. key "intermediates" supplies both the
+  // masthead Uppers tension and the Pre-bend (its .in field).
+  const ROWS = [
+    { key: "intermediates", label: "Uppers", type: "tension" },
+    { key: "uppers", label: "Intermediates", type: "tension" },
+    { key: "lowers", label: "Lowers", type: "tension" },
+    { key: "forestay", label: "Forestay", type: "inches" },
+    { key: "intermediates", label: "Pre-bend", type: "inches" }
+  ];
+
+  const dash = '<span class="muted">—</span>';
+  const tension = (wire, cell, isWind) => {
+    if (!cell || cell.empty) return dash;
+    if (isWind && cell.sameAsBase) return '<span class="g">= base</span>';
+    const out = [];
+    if (isWind && cell.turns != null && cell.turns !== "")
+      out.push(`<span class="d">${cell.turns > 0 ? "+" : ""}${esc(String(cell.turns))}</span>`);
+    const lbs = cell.lbs != null && cell.lbs !== "" ? cell.lbs : null;
+    const loos = cell.loos != null && cell.loos !== "" ? loosToDisplay(wire, cell.loos) : null;
+    if (lbs != null) {
+      out.push(esc(String(lbs)));
+      if (loos != null && loos !== "") out.push(`<span class="g">(${esc(String(loos))})</span>`);
+    } else if (loos != null && loos !== "") {
+      out.push(`<span class="g">${esc(String(loos))}</span>`);
+    } else if (cell.note) {
+      return `<span class="note">${esc(cell.note)}</span>`;
+    }
+    if (!out.length) return dash;
+    let s = out.join(" ");
+    if (cell.note && lbs != null) s += ` <span class="g">${esc(cell.note)}</span>`;
+    return s;
+  };
+  const inches = (cell, isWind) => {
+    if (!cell || cell.empty) return dash;
+    if (isWind && cell.sameAsBase) return '<span class="g">= base</span>';
+    return cell.in != null && cell.in !== "" ? `${esc(String(cell.in))}″` : dash;
+  };
+  const renderCell = (row, cell, isWind) =>
+    row.type === "inches" ? inches(cell, isWind) : tension(row.key, cell, isWind);
+
+  // base table
+  const baseHead = `<tr><th>Setting</th>${setups.map((s) => `<th class="boatcol">${esc(s.label)}</th>`).join("")}</tr>`;
+  const baseRows = ROWS.map((row) =>
+    `<tr><td class="rowlabel">${esc(row.label)}</td>${
+      setups.map((s) => `<td class="num">${renderCell(row, (s.base || {})[row.key], false)}</td>`).join("")
+    }</tr>`
+  ).join("");
+
+  // matrix by wind range
+  const matrixHead = `<tr><th colspan="2">Range · Tune</th>${setups.map((s) => `<th class="boatcol">${esc(s.label)}</th>`).join("")}</tr>`;
+  const matrixBody = ranges.map((r) => {
+    const rc = bandClass[r.band] || "r-med";
+    return ROWS.map((row, i) => {
+      const rangeCell = i === 0
+        ? `<td class="range ${rc}" rowspan="${ROWS.length}">${r.knots[0]}–${r.knots[1]}<small>${esc(r.band)}</small></td>`
+        : "";
+      const cells = setups.map((s) => `<td class="num">${renderCell(row, (s.byWind?.[r.id] || {})[row.key], true)}</td>`).join("");
+      return `<tr class="${i === 0 ? "grp" : ""}">${rangeCell}<td class="rowlabel">${esc(row.label)}</td>${cells}</tr>`;
+    }).join("");
+  }).join("");
+
+  // pre-bend callout
+  const pb = cfg.prebend || {};
+  const pbText = [pb.measurement, pb.note].filter(Boolean).map(esc).join(" ");
+  const setupCallout = pbText
+    ? `<div class="setup"><span class="tag">Pre-bend</span><div class="sbody">${pbText}</div></div>`
+    : "";
+
+  // notes: per-tune notes + global notes
+  const noteItems = [];
+  setups.forEach((s) => (s.notes || []).forEach((n) => noteItems.push(`<li><b>${esc(s.label)}:</b> ${esc(n)}</li>`)));
+  (cfg.globalNotes || []).forEach((n) => noteItems.push(`<li>${esc(n)}</li>`));
+  const notesBlock = noteItems.length ? `<div class="notes"><h3>Notes</h3><ul>${noteItems.join("")}</ul></div>` : "";
+
+  const hullBlock = cfg.hull?.note ? `<div class="hullnote">${esc(cfg.hull.note)}</div>` : "";
+  const termBlock = cfg.terminology?.northSailsWarning
+    ? `<div class="terminote"><b>Terminology:</b> ${esc(cfg.terminology.northSailsWarning)}</div>` : "";
+
+  return `
+  <div class="tcard">
+    <header>
+      <div>
+        <p class="eyebrow">A Scow · ${esc(cfg.meta?.rig || "Swept Rig")}</p>
+        <h1>${esc(prof.name)}</h1>
+      </div>
+      <div class="src">
+        Tensions in <b>lbs</b><br>
+        Gauge: <b>Loos ${esc(activeGauge())}</b><br>
+        Printed ${esc(today)}
+      </div>
+    </header>
+    <div class="wrap">
+      ${setupCallout}
+      <div class="section-label">Base Setting <span class="sub">(rest setup)</span></div>
+      <table class="base"><thead>${baseHead}</thead><tbody>${baseRows}</tbody></table>
+      <div class="section-label">By Wind Range <span class="sub">(adjust from base)</span></div>
+      <table class="matrix"><thead>${matrixHead}</thead><tbody>${matrixBody}</tbody></table>
+    </div>
+    <div class="foot">
+      <div class="legend">
+        <span><b>(nn)</b> = Loos ${esc(activeGauge())} reading</span>
+        <span><b class="d">+n</b> = turns from base → resulting lbs</span>
+        <span><b>Forestay</b> = inches from deck plate (rake)</span>
+        <span><span class="chip chip-y"></span>Light</span>
+        <span><span class="chip chip-b"></span>Medium</span>
+        <span><span class="chip chip-r"></span>Heavy</span>
+      </div>
+      ${notesBlock}
+      ${hullBlock}
+      ${termBlock}
+    </div>
+  </div>`;
 }
 
 /* ============================================================
@@ -1072,10 +1195,13 @@ function bindEvents() {
   $("#btnAddSetup").addEventListener("click", addSetup);
 
   // print
-  $("#btnPrintGrid").addEventListener("click", () => printView("grid"));
+  $("#btnPrintGrid").addEventListener("click", printGridCard);
   $("#btnPrintLog").addEventListener("click", () => printView("log"));
   $("#btnPrintAnalysis").addEventListener("click", () => printView("analysis"));
-  window.addEventListener("afterprint", () => { delete document.body.dataset.print; });
+  window.addEventListener("afterprint", () => {
+    delete document.body.dataset.print;
+    $("#printCard").innerHTML = "";
+  });
 
   $("#setupNotes").addEventListener("click", (e) => {
     if (e.target.id === "btnAddNote") {
