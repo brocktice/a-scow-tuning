@@ -1003,7 +1003,8 @@ function buildTuningCard() {
     }
     if (!out.length) return dash;
     let s = out.join(" ");
-    if (cell.note && lbs != null) s += ` <span class="g">${esc(cell.note)}</span>`;
+    // note goes to the LEFT so the numbers stay right-aligned with the column
+    if (cell.note) s = `<span class="g">${esc(cell.note)}</span> ` + s;
     return s;
   };
   const inches = (cell, isWind) => {
