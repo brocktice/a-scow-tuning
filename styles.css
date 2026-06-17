@@ -393,6 +393,10 @@ details.ref summary { cursor: pointer; color: var(--muted); }
 .tcard .legend { display:flex; flex-wrap:wrap; gap:6px 20px; font-size:11.5px; color:#5c6b76; padding:12px 0 4px; border-top:1px solid #c9cfca; margin-top:6px; }
 .tcard .legend b { color:#11212f; font-weight:600; }
 .tcard .legend .d { color:#1f6fb2; }
+.tcard .fs { display:inline-block; padding:0 5px; border-radius:3px; font-weight:600; }
+.tcard .fs-blue { background:#1f6fb2; color:#fff; }
+.tcard .fs-yellow { background:#f1c000; color:#11212f; }
+.tcard .fs-red { background:#cf3a32; color:#fff; }
 .tcard .chip { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:-1px; }
 .tcard .chip-y { background:#f1c000; } .tcard .chip-b { background:#1f6fb2; } .tcard .chip-r { background:#cf3a32; }
 .tcard .notes { margin-top:14px; }

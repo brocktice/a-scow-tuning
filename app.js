@@ -1000,13 +1000,19 @@ function buildTuningCard() {
     if (cell.note && lbs != null) s += ` <span class="g">${esc(cell.note)}</span>`;
     return s;
   };
-  const inches = (cell, isWind) => {
+  const inches = (cell, isWind, isForestay) => {
     if (!cell || cell.empty) return dash;
     if (isWind && cell.sameAsBase) return '<span class="g">= base</span>';
-    return cell.in != null && cell.in !== "" ? `${esc(String(cell.in))}″` : dash;
+    if (cell.in == null || cell.in === "") return dash;
+    const txt = `${esc(String(cell.in))}″`;
+    if (!isForestay) return txt;
+    // color forestay (rake) by value: 15.5"=blue, 16"=yellow, 17"=red
+    const v = parseFloat(cell.in);
+    const cls = v === 15.5 ? "fs-blue" : v === 16 ? "fs-yellow" : v === 17 ? "fs-red" : "";
+    return cls ? `<span class="fs ${cls}">${txt}</span>` : txt;
   };
   const renderCell = (row, cell, isWind) =>
-    row.type === "inches" ? inches(cell, isWind) : tension(row.key, cell, isWind);
+    row.type === "inches" ? inches(cell, isWind, row.key === "forestay") : tension(row.key, cell, isWind);
 
   // base table
   const baseHead = `<tr><th>Setting</th>${setups.map((s) => `<th class="boatcol">${esc(s.label)}</th>`).join("")}</tr>`;
