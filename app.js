@@ -1270,7 +1270,7 @@ function qbez(p0, p1, p2, t) {
 }
 
 function diagramSide(T, prebend, forestay) {
-  const W = 340, H = 440, deckY = 345, waterY = 360;
+  const W = 340, H = 440, deckY = 345, waterY = 353;  // waterline crosses the hull
   const mastBaseX = 162, topY = 56;
   const rakePx = 34 + (forestay != null ? (forestay - 16) * 10 : 0);  // exaggerated rake
   const topX = mastBaseX - rakePx;                                    // masthead aft (left)
@@ -1285,8 +1285,7 @@ function diagramSide(T, prebend, forestay) {
   const fwdCP = [mastBaseX + 18, deckY];        // lowers -> forward chainplate hole (toward bow)
   const aftCP = [mastBaseX - 22, deckY];        // intermediates -> aft chainplate hole
   const c = (id) => tensionColor(sideAvg(T[id]), T[id].size);
-  // diamonds (uppers) are athwartship: shown edge-on as the bend line just aft of the mast
-  const dOff = (p) => [p[0] - 7, p[1]];
+  const mastD = `M ${base[0].toFixed(1)},${base[1].toFixed(1)} Q ${ctrl[0].toFixed(1)},${ctrl[1].toFixed(1)} ${top[0].toFixed(1)},${top[1].toFixed(1)}`;
 
   // Boom: rotates with the rake (rigid rig — aft end drops as the mast rakes aft);
   // horizontal at the light-air setting. Independent of pre-bend.
@@ -1338,19 +1337,20 @@ function diagramSide(T, prebend, forestay) {
       <marker id="rkArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
         <path d="M 0,1 L 9,5 L 0,9 z" fill="#1f6fb2"/></marker>
     </defs>
-    <line x1="12" y1="${waterY}" x2="${W - 12}" y2="${waterY}" stroke="#9fc3e0" stroke-width="2"/>
-    <!-- foils: centerboard near the mast, rudder at the stern -->
-    <path d="M 162,356 L 173,356 L 168,407 L 164,407 Z" fill="#cdd6de" stroke="#33424f" stroke-width="1.5"/>
-    <path d="M 60,355 L 70,355 L 67,388 L 64,388 Z" fill="#cdd6de" stroke="#33424f" stroke-width="1.5"/>
+    <!-- foils: bilge board just aft of the mast base, rudder at the stern -->
+    <path d="M 138,357 L 152,357 L 148,396 L 144,396 Z" fill="#cdd6de" stroke="#33424f" stroke-width="1.5"/>
+    <path d="M 60,356 L 69,356 L 66,371 L 63,371 Z" fill="#cdd6de" stroke="#33424f" stroke-width="1.5"/>
     <!-- hull: long low scow; fine pointed bow overhang (right), blunt raked transom
          (left), flat rockered bottom -->
     <path d="M 46,344 C 120,343 228,341 ${bowX},${bowDeckY} C 304,343 298,348 290,350 C 238,358 150,359 96,358 C 72,358 56,358 50,355 C 47,353 45,349 46,344 Z" fill="#eef2f6" stroke="#33424f" stroke-width="2"/>
+    <!-- waterline (drawn over the hull so the hull sits IN the water) -->
+    <line x1="12" y1="${waterY}" x2="${W - 12}" y2="${waterY}" stroke="#9fc3e0" stroke-width="2"/>
     <!-- boom (horizontal at light air, rotates aft-down with rake) -->
     ${line(goosX, goosY, boomEnd[0], boomEnd[1], "#5c6b76", 4)}
-    <!-- diamonds (uppers / pre-bend wire), edge-on just aft of the mast -->
-    <path d="M ${dOff(base)[0].toFixed(1)},${dOff(base)[1].toFixed(1)} Q ${dOff(ctrl)[0].toFixed(1)},${dOff(ctrl)[1].toFixed(1)} ${dOff(top)[0].toFixed(1)},${dOff(top)[1].toFixed(1)}" fill="none" stroke="${c("upper")}" stroke-width="3"/>
     <!-- mast: rake + pre-bend -->
-    <path d="M ${base[0].toFixed(1)},${base[1].toFixed(1)} Q ${ctrl[0].toFixed(1)},${ctrl[1].toFixed(1)} ${top[0].toFixed(1)},${top[1].toFixed(1)}" fill="none" stroke="#2b3742" stroke-width="5"/>
+    <path d="${mastD}" fill="none" stroke="#2b3742" stroke-width="5"/>
+    <!-- uppers (diamonds): athwartship wires; edge-on they follow the mast's bent line -->
+    <path d="${mastD}" fill="none" stroke="${c("upper")}" stroke-width="2.5"/>
     <!-- forestay (masthead to the bow deck plate; pin marked along it) -->
     ${line(topX, topY, bowX, bowDeckY, "#7d8a94", 2)}
     <!-- spreaders (athwartship, foreshortened) -->
@@ -1376,7 +1376,7 @@ function diagramFront(T) {
   const cx = 170, halfBeam = 28;                        // 8 ft beam to scale
   const tilt = 4;                                       // exaggerated hull asymmetry (stbd high)
   const deckL = deckYb - tilt, deckR = deckYb + tilt;   // stbd=left higher, port=right lower
-  const waterY = 360;                                  // matches the side view
+  const waterY = 353;                                  // crosses the hull; matches the side view
   const mastH = deckYb - topY;
   const hLow = deckYb - 0.40 * mastH, hUp = deckYb - 0.64 * mastH;  // spreader heights (match side)
   const spLow = 17, spUp = 14;                          // spreader half-lengths (~2.5 / 2 ft)
@@ -1397,8 +1397,9 @@ function diagramFront(T) {
 
   const xl = cx - halfBeam, xr = cx + halfBeam, botY = deckYb + 13;  // flat, shallow scow hull
   return `<svg viewBox="0 0 ${W} ${H}" class="diag-svg" role="img" aria-label="Front view">
-    <line x1="12" y1="${waterY}" x2="${W - 12}" y2="${waterY}" stroke="#9fc3e0" stroke-width="2"/>
     <path d="M ${xl},${deckL} L ${xr},${deckR} L ${xr - 2},${botY} Q ${cx},${botY + 3} ${xl + 2},${botY} Z" fill="#eef2f6" stroke="#33424f" stroke-width="2"/>
+    <!-- waterline (drawn over the hull so the hull sits IN the water) -->
+    <line x1="12" y1="${waterY}" x2="${W - 12}" y2="${waterY}" stroke="#9fc3e0" stroke-width="2"/>
     ${sideRig(1, "port", cpRX, deckR)}
     ${sideRig(-1, "stbd", cpLX, deckL)}
     <!-- mast: plumb (vertical) regardless of deck tilt -->
