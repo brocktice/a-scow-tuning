@@ -1270,27 +1270,53 @@ function qbez(p0, p1, p2, t) {
 }
 
 function diagramSide(T, prebend, forestay) {
-  const W = 340, H = 440, deckY = 345, waterY = 362;
+  const W = 340, H = 440, deckY = 345, waterY = 360;
   const mastBaseX = 162, topY = 56;
   const rakePx = 34 + (forestay != null ? (forestay - 16) * 10 : 0);  // exaggerated rake
   const topX = mastBaseX - rakePx;                                    // masthead aft (left)
-  const bendPx = (prebend != null ? prebend : 0) * 4.5;              // exaggerated forward bow
+  // exaggerated forward bow; amplify around a ~3" baseline so the change between
+  // settings (typically 4–5.5") is clearly visible, not just a few pixels.
+  const bendPx = prebend != null ? Math.max(4, (prebend - 3) * 13) : 0;
   const base = [mastBaseX, deckY], top = [topX, topY];
   const ctrl = [(mastBaseX + topX) / 2 + bendPx, (deckY + topY) / 2];
   const lowP = qbez(base, ctrl, top, 0.40);     // lower spreader, on the mast
   const upP = qbez(base, ctrl, top, 0.64);      // upper spreader, on the mast
-  const bowX = 300, bowDeckY = 343;
+  const bowX = 322, bowDeckY = 334;
   const fwdCP = [mastBaseX + 18, deckY];        // lowers -> forward chainplate hole (toward bow)
   const aftCP = [mastBaseX - 22, deckY];        // intermediates -> aft chainplate hole
   const c = (id) => tensionColor(sideAvg(T[id]), T[id].size);
   // diamonds (uppers) are athwartship: shown edge-on as the bend line just aft of the mast
   const dOff = (p) => [p[0] - 7, p[1]];
 
+  // Boom: horizontal at the light-air setting, then tilts up aft as the mast rakes.
+  const rakeLight = 34 + (15.5 - 16) * 10;      // light-air reference rake (forestay 15.5")
+  const mastH = deckY - topY;
+  const boomTilt = Math.atan2(rakePx, mastH) - Math.atan2(rakeLight, mastH);  // >=0 as rake grows
+  const goosX = mastBaseX, goosY = deckY - 6, boomLen = 80;
+  const boomEnd = [goosX - boomLen * Math.cos(boomTilt), goosY - boomLen * Math.sin(boomTilt)];
+
+  // Pre-bend measurement: straight chord tip->base, arrow at the widest gap.
+  const chordMid = [(base[0] + top[0]) / 2, (base[1] + top[1]) / 2];
+  const curveMid = qbez(base, ctrl, top, 0.5);
+  const showPB = prebend != null && prebend > 0;
+  const lblX = curveMid[0] + 56, lblY = curveMid[1] - 2;
+  const pbMetric = !showPB ? "" : `
+    <line x1="${base[0].toFixed(1)}" y1="${base[1]}" x2="${top[0].toFixed(1)}" y2="${top[1]}" stroke="#9aa6b0" stroke-width="1.5" stroke-dasharray="5 4"/>
+    <line x1="${chordMid[0].toFixed(1)}" y1="${chordMid[1].toFixed(1)}" x2="${curveMid[0].toFixed(1)}" y2="${curveMid[1].toFixed(1)}" stroke="#c0392b" stroke-width="1.5"/>
+    <line x1="${lblX.toFixed(1)}" y1="${lblY.toFixed(1)}" x2="${curveMid[0].toFixed(1)}" y2="${curveMid[1].toFixed(1)}" stroke="#c0392b" stroke-width="1.5" marker-end="url(#pbArrow)"/>
+    <text x="${(lblX + 4).toFixed(1)}" y="${(lblY + 4).toFixed(1)}" class="diag-t" text-anchor="start" fill="#c0392b">pre-bend ${prebend}″</text>`;
+
   return `<svg viewBox="0 0 ${W} ${H}" class="diag-svg" role="img" aria-label="Side view">
+    <defs><marker id="pbArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0,1 L 9,5 L 0,9 z" fill="#c0392b"/></marker></defs>
     <line x1="12" y1="${waterY}" x2="${W - 12}" y2="${waterY}" stroke="#9fc3e0" stroke-width="2"/>
-    <path d="M 48,${deckY + 2} L 292,${bowDeckY} C 312,${bowDeckY} 314,360 296,365 L 70,367 C 46,367 40,352 48,${deckY + 2} Z" fill="#eef2f6" stroke="#33424f" stroke-width="2"/>
-    <path d="M 152,367 L 172,367 L 166,392 L 158,392 Z" fill="#cdd6de" stroke="#33424f" stroke-width="1.5"/>
-    ${line(mastBaseX, deckY, 88, 330, "#5c6b76", 4)}
+    <!-- foils -->
+    <path d="M 222,353 L 230,353 L 226,406 L 222,406 Z" fill="#cdd6de" stroke="#33424f" stroke-width="1.5"/>
+    <path d="M 64,353 L 72,353 L 69,388 L 66,388 Z" fill="#cdd6de" stroke="#33424f" stroke-width="1.5"/>
+    <!-- hull: long, low scow; bow upswept (right), blunt transom (left), flat bottom -->
+    <path d="M 46,344 C 110,343 235,342 ${bowX},${bowDeckY} C 331,337 331,346 320,352 C 300,357 230,357 170,357 C 112,357 64,357 54,356 C 47,355 44,350 46,344 Z" fill="#eef2f6" stroke="#33424f" stroke-width="2"/>
+    <!-- boom (horizontal at light air, tilts with rake) -->
+    ${line(goosX, goosY, boomEnd[0], boomEnd[1], "#5c6b76", 4)}
     <!-- diamonds (uppers / pre-bend wire), edge-on just aft of the mast -->
     <path d="M ${dOff(base)[0].toFixed(1)},${dOff(base)[1].toFixed(1)} Q ${dOff(ctrl)[0].toFixed(1)},${dOff(ctrl)[1].toFixed(1)} ${dOff(top)[0].toFixed(1)},${dOff(top)[1].toFixed(1)}" fill="none" stroke="${c("upper")}" stroke-width="3"/>
     <!-- mast: rake + pre-bend -->
@@ -1306,6 +1332,7 @@ function diagramSide(T, prebend, forestay) {
     ${line(lowP[0], lowP[1], fwdCP[0], fwdCP[1], c("lower"), 4)}
     <circle cx="${aftCP[0]}" cy="${aftCP[1]}" r="3" fill="#33424f"/>
     <circle cx="${fwdCP[0]}" cy="${fwdCP[1]}" r="3" fill="#33424f"/>
+    ${pbMetric}
     <text x="${topX - 4}" y="${topY - 6}" class="diag-t" text-anchor="end">masthead</text>
     <text x="${bowX}" y="${bowDeckY - 8}" class="diag-t" text-anchor="middle">bow</text>
   </svg>`;
@@ -1319,7 +1346,7 @@ function diagramFront(T) {
   const cx = 170, halfBeam = 28;                        // 8 ft beam to scale
   const tilt = 4;                                       // exaggerated hull asymmetry (stbd high)
   const deckL = deckYb - tilt, deckR = deckYb + tilt;   // stbd=left higher, port=right lower
-  const waterY = deckYb + 11;
+  const waterY = 360;                                  // matches the side view
   const mastH = deckYb - topY;
   const hLow = deckYb - 0.40 * mastH, hUp = deckYb - 0.64 * mastH;  // spreader heights (match side)
   const spLow = 17, spUp = 14;                          // spreader half-lengths (~2.5 / 2 ft)
