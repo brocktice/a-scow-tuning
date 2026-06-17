@@ -53,6 +53,23 @@ header.app h1 .sub { color: var(--muted); font-weight: 400; font-size: 13px; mar
 .profile-bar { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
 
 .whoami { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+/* "Saved" indicator */
+.saved-flash {
+  font-size: 12px; font-weight: 600; white-space: nowrap;
+  color: var(--good);
+  border: 1px solid var(--good); border-radius: 999px;
+  padding: 2px 8px;
+  opacity: 0; transform: translateY(-1px);
+  transition: opacity .15s ease;
+  pointer-events: none;
+}
+.saved-flash.show { opacity: 1; }
+@keyframes cellSaved {
+  0%   { background: rgba(70, 200, 124, .45); }
+  100% { background: transparent; }
+}
+.cell-saved { animation: cellSaved .9s ease-out; }
 .gauge-pick { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 4px; white-space: nowrap; }
 .gauge-pick select { padding: 4px 6px; }
 

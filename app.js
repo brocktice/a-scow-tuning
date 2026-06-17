@@ -166,6 +166,16 @@ function makeProfile(name, id) {
   };
 }
 
+let savedFlashTimer = null;
+function flashSaved() {
+  const el = $("#savedFlash");
+  if (!el) return;
+  el.hidden = false;
+  el.classList.add("show");
+  clearTimeout(savedFlashTimer);
+  savedFlashTimer = setTimeout(() => { el.classList.remove("show"); }, 1400);
+}
+
 function save() {
   const p = activeProfile();
   if (p) p.updatedAt = new Date().toISOString();
@@ -174,6 +184,7 @@ function save() {
   } catch (e) {
     alert("Could not save to browser storage: " + e.message);
   }
+  flashSaved();
   scheduleSync();
 }
 
@@ -507,6 +518,11 @@ function commitCellEdit(input) {
   // if a sameAsBase cell gets edited, drop the flag
   if (where !== "base" && target.sameAsBase && raw) delete target.sameAsBase;
   save();
+  // brief green flash on the edited cell so it's clear the change stuck
+  input.classList.remove("cell-saved");
+  void input.offsetWidth;            // restart animation if re-edited quickly
+  input.classList.add("cell-saved");
+  setTimeout(() => input.classList.remove("cell-saved"), 900);
   // re-render warnings only (avoid losing focus on full re-render)
   const viol = validateSetup(setup, activeProfile().config.windRanges);
   $("#gridWarnings").innerHTML = viol.length
