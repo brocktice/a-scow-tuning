@@ -184,6 +184,11 @@ button.sm { padding: 5px 9px; font-size: 13px; }
 .tape-blue { background: rgba(78, 161, 255, .15); color: var(--blue); border-color: #2a4d77; }
 .tape-red { background: rgba(255, 107, 107, .15); color: var(--red); border-color: #6a2a2a; }
 
+/* wind-band pills — vivid solid: Light=blue, Medium=yellow, Heavy=red */
+.band-light { background: #1f6fb2; color: #fff; border-color: #1f6fb2; }
+.band-medium { background: #f1c000; color: #11212f; border-color: #f1c000; }
+.band-heavy { background: #cf3a32; color: #fff; border-color: #cf3a32; }
+
 .warn-flag {
   color: var(--warn);
   font-size: 12px;
@@ -386,17 +391,13 @@ details.ref summary { cursor: pointer; color: var(--muted); }
 .tcard .matrix tr:last-child td { border-bottom:none; }
 .tcard .range { font-family:"Oswald",sans-serif; font-weight:600; color:#fff; text-align:center; width:64px; line-height:1.15; vertical-align:middle; }
 .tcard .range small { display:block; font-size:9px; letter-spacing:.14em; font-weight:500; opacity:.85; text-transform:uppercase; }
-.tcard .r-light { background:#f1c000; color:#11212f; }
-.tcard .r-med { background:#1f6fb2; }
-.tcard .r-heavy { background:#cf3a32; }
+.tcard .r-light { background:#1f6fb2; color:#fff; }
+.tcard .r-med { background:#f1c000; color:#11212f; }
+.tcard .r-heavy { background:#cf3a32; color:#fff; }
 .tcard .foot { padding:6px 26px 24px; }
 .tcard .legend { display:flex; flex-wrap:wrap; gap:6px 20px; font-size:11.5px; color:#5c6b76; padding:12px 0 4px; border-top:1px solid #c9cfca; margin-top:6px; }
 .tcard .legend b { color:#11212f; font-weight:600; }
 .tcard .legend .d { color:#1f6fb2; }
-.tcard .fs { display:inline-block; padding:0 5px; border-radius:3px; font-weight:600; }
-.tcard .fs-blue { background:#1f6fb2; color:#fff; }
-.tcard .fs-yellow { background:#f1c000; color:#11212f; }
-.tcard .fs-red { background:#cf3a32; color:#fff; }
 .tcard .chip { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:-1px; }
 .tcard .chip-y { background:#f1c000; } .tcard .chip-b { background:#1f6fb2; } .tcard .chip-r { background:#cf3a32; }
 .tcard .notes { margin-top:14px; }

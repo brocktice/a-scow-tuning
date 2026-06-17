@@ -275,6 +275,12 @@ function activeProfile() {
   return state.profiles.find((p) => p.id === state.activeProfileId) || state.profiles[0];
 }
 
+// wind-band pill (Light=blue, Medium=yellow, Heavy=red)
+const BAND_CLASS = { light: "band-light", medium: "band-medium", heavy: "band-heavy" };
+function bandPill(band) {
+  return `<span class="pill ${BAND_CLASS[band] || ""}">${esc(band)}</span>`;
+}
+
 /* ---------- tension cell helpers ---------- */
 // Resolve a wind cell against base (handles sameAsBase).
 function resolveCell(setup, rangeId, wire) {
@@ -461,7 +467,7 @@ function renderGrid() {
   // header row
   const rangeHead = ranges.map((r) => {
     const lo = r.knots[0], hi = r.knots[1];
-    return `<th>${lo}–${hi} kn <span class="pill tape-${r.tape}">${r.band}</span></th>`;
+    return `<th>${lo}–${hi} kn ${bandPill(r.band)}</th>`;
   }).join("");
 
   // body rows: one per wire + forestay + base column
@@ -825,7 +831,7 @@ function renderLogList() {
   const cfg = p.config;
   host.innerHTML = entries.map((l) => {
     const r = cfg.windRanges.find((x) => x.id === l.rangeId);
-    const tape = r ? `<span class="pill tape-${r.tape}">${r.band}</span>` : "";
+    const tape = r ? bandPill(r.band) : "";
     const ps = perSideSummary(l.perSide);
     return `<div class="log-entry">
       <div class="le-head">
@@ -914,7 +920,7 @@ function renderAnalysis() {
       const label = r.id === "unspecified" ? "Unspecified range" : `${r.knots[0]}–${r.knots[1]} kn`;
       const sub = `<br><span class="cell-sub">P/S ${gaugeUnit()}/lbs</span>`;
       return `<div style="margin-bottom:18px;">
-        <h3 style="margin:0 0 6px;">${label} <span class="pill tape-${r.tape}">${r.band}</span> <span class="analysis-target">${entries.length} entr${entries.length === 1 ? "y" : "ies"}</span></h3>
+        <h3 style="margin:0 0 6px;">${label} ${bandPill(r.band)} <span class="analysis-target">${entries.length} entr${entries.length === 1 ? "y" : "ies"}</span></h3>
         <div class="grid-wrap"><table class="grid">
           <thead><tr><th>Date</th><th>Uppers${sub}</th><th>Intermediates${sub}</th><th>Lowers${sub}</th><th>Forestay / pb</th><th>Performance</th><th>Adjustments</th></tr></thead>
           <tbody>${refRow}${rows}</tbody>
@@ -1000,19 +1006,13 @@ function buildTuningCard() {
     if (cell.note && lbs != null) s += ` <span class="g">${esc(cell.note)}</span>`;
     return s;
   };
-  const inches = (cell, isWind, isForestay) => {
+  const inches = (cell, isWind) => {
     if (!cell || cell.empty) return dash;
     if (isWind && cell.sameAsBase) return '<span class="g">= base</span>';
-    if (cell.in == null || cell.in === "") return dash;
-    const txt = `${esc(String(cell.in))}″`;
-    if (!isForestay) return txt;
-    // color forestay (rake) by value: 15.5"=blue, 16"=yellow, 17"=red
-    const v = parseFloat(cell.in);
-    const cls = v === 15.5 ? "fs-blue" : v === 16 ? "fs-yellow" : v === 17 ? "fs-red" : "";
-    return cls ? `<span class="fs ${cls}">${txt}</span>` : txt;
+    return cell.in != null && cell.in !== "" ? `${esc(String(cell.in))}″` : dash;
   };
   const renderCell = (row, cell, isWind) =>
-    row.type === "inches" ? inches(cell, isWind, row.key === "forestay") : tension(row.key, cell, isWind);
+    row.type === "inches" ? inches(cell, isWind) : tension(row.key, cell, isWind);
 
   // base table
   const baseHead = `<tr><th>Setting</th>${setups.map((s) => `<th class="boatcol">${esc(s.label)}</th>`).join("")}</tr>`;
@@ -1070,8 +1070,8 @@ function buildTuningCard() {
         <span><b>(nn)</b> = Loos ${esc(activeGauge())} reading</span>
         <span><b class="d">+n</b> = turns from base → resulting lbs</span>
         <span><b>Forestay</b> = inches from deck plate (rake)</span>
-        <span><span class="chip chip-y"></span>Light</span>
-        <span><span class="chip chip-b"></span>Medium</span>
+        <span><span class="chip chip-b"></span>Light</span>
+        <span><span class="chip chip-y"></span>Medium</span>
         <span><span class="chip chip-r"></span>Heavy</span>
       </div>
       ${notesBlock}
