@@ -256,6 +256,7 @@ table.grid tbody tr:nth-child(even) td { background: rgba(255,255,255,.02); }
 .ps-name { width: 78px; font-weight: 600; flex: none; }
 .ps-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; flex: 1; }
 .ps-grid label { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--muted); }
+.ps-grid .ps-cap { display: block; white-space: nowrap; line-height: 1.3; }
 .ps-grid input { width: 100%; }
 .kvtable { width: 100%; border-collapse: collapse; }
 .kvtable td { padding: 4px 8px; border-bottom: 1px solid var(--line); }

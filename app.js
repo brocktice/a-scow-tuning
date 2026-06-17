@@ -95,6 +95,30 @@ function normalizeState(st) {
     p.log = Array.isArray(p.log) ? p.log : [];
   }
   if (!st.profiles.some((p) => p.id === st.activeProfileId)) st.activeProfileId = st.profiles[0].id;
+
+  // one-time: log entries recorded before the gauge feature hold raw PT-1 readings
+  // in canonical (Model A) slots. Convert them once, and default this user to the
+  // PT-1 gauge they actually use so the numbers read as originally written down.
+  if (!st.logsGaugeMigrated) {
+    let migrated = false;
+    for (const p of st.profiles) {
+      for (const entry of (p.log || [])) {
+        const ps = entry.perSide; if (!ps) continue;
+        for (const wireRow of ["uppers", "lowers", "intermediates"]) {
+          const w = ps[wireRow]; if (!w) continue;
+          for (const sideKey of ["port", "stbd"]) {
+            const sd = w[sideKey];
+            if (!sd || sd.loos === "" || sd.loos == null) continue;
+            const conv = convertReading("PT-1", "Model A", WIRE_SIZE[wireRow], sd.loos);
+            if (conv != null) { sd.loos = conv; migrated = true; }
+          }
+        }
+      }
+    }
+    if (migrated) st.gauge = "PT-1";
+    st.logsGaugeMigrated = true;
+  }
+
   if (!GAUGES.includes(st.gauge)) st.gauge = "Model A";
   return st;
 }
