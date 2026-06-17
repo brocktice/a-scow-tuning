@@ -1279,8 +1279,10 @@ function diagramSide(T, prebend, forestay) {
   const bendPx = prebend != null ? Math.max(4, (prebend - 3) * 13) : 0;
   const base = [mastBaseX, deckY], top = [topX, topY];
   const ctrl = [(mastBaseX + topX) / 2 + bendPx, (deckY + topY) / 2];
-  const lowP = qbez(base, ctrl, top, 0.40);     // lower spreader, on the mast
-  const upP = qbez(base, ctrl, top, 0.64);      // upper spreader, on the mast
+  const lowP = qbez(base, ctrl, top, 0.40);     // lower spreader root, on the mast
+  const upP = qbez(base, ctrl, top, 0.64);      // upper spreader root, on the mast
+  const loTip = [lowP[0] - 13, lowP[1] + 3];    // spreader tips (swept aft, foreshortened)
+  const upTip = [upP[0] - 11, upP[1] + 3];
   const bowX = 308, bowDeckY = 338;
   const fwdCP = [mastBaseX + 18, deckY];        // lowers -> forward chainplate hole (toward bow)
   const aftCP = [mastBaseX - 22, deckY];        // intermediates -> aft chainplate hole
@@ -1349,13 +1351,13 @@ function diagramSide(T, prebend, forestay) {
     ${line(goosX, goosY, boomEnd[0], boomEnd[1], "#5c6b76", 4)}
     <!-- mast: rake + pre-bend -->
     <path d="${mastD}" fill="none" stroke="#2b3742" stroke-width="5"/>
-    <!-- uppers (diamonds): athwartship wires; edge-on they follow the mast's bent line -->
-    <path d="${mastD}" fill="none" stroke="${c("upper")}" stroke-width="2.5"/>
+    <!-- uppers (diamonds): masthead -> upper spreader tip -> lower spreader tip -> base -->
+    ${poly([top, upTip, loTip, base], c("upper"), 2.5)}
     <!-- forestay (masthead to the bow deck plate; pin marked along it) -->
     ${line(topX, topY, bowX, bowDeckY, "#7d8a94", 2)}
     <!-- spreaders (athwartship, foreshortened) -->
-    ${line(lowP[0], lowP[1], lowP[0] - 13, lowP[1] + 3, "#5c6b76", 3)}
-    ${line(upP[0], upP[1], upP[0] - 11, upP[1] + 3, "#5c6b76", 3)}
+    ${line(lowP[0], lowP[1], loTip[0], loTip[1], "#5c6b76", 3)}
+    ${line(upP[0], upP[1], upTip[0], upTip[1], "#5c6b76", 3)}
     <!-- intermediates: mast @ upper spreader -> aft chainplate -->
     ${line(upP[0], upP[1], aftCP[0], aftCP[1], c("inter"), 4)}
     <!-- lowers: mast @ lower spreader -> forward chainplate -->
