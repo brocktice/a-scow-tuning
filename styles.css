@@ -365,11 +365,11 @@ details.ref summary { cursor: pointer; color: var(--muted); }
 #printCard { display: none; }
 .tcard { background:#f5f6f4; color:#11212f; max-width:880px; margin:0 auto; font-family:"Inter",system-ui,sans-serif; -webkit-font-smoothing:antialiased;
   -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-.tcard header { background:#0c2233; color:#eef3f6; padding:20px 26px 18px; display:flex; align-items:flex-end; justify-content:space-between; gap:16px; border-bottom:3px solid #f1c000; }
-.tcard .eyebrow { font-family:"Oswald",sans-serif; text-transform:uppercase; letter-spacing:.32em; font-size:11px; font-weight:500; color:#9fb6c6; margin:0 0 4px; }
-.tcard h1 { font-family:"Oswald",sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:.04em; font-size:32px; line-height:.95; margin:0; color:#eef3f6; }
-.tcard .src { text-align:right; font-size:12px; color:#9fb6c6; line-height:1.5; white-space:nowrap; }
-.tcard .src b { color:#eef3f6; font-weight:600; }
+.tcard header { background:transparent; color:#11212f; padding:14px 26px 10px; display:flex; align-items:flex-end; justify-content:space-between; gap:16px; border-bottom:3px solid #f1c000; }
+.tcard .eyebrow { font-family:"Oswald",sans-serif; text-transform:uppercase; letter-spacing:.32em; font-size:11px; font-weight:500; color:#5c6b76; margin:0 0 4px; }
+.tcard h1 { font-family:"Oswald",sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:.04em; font-size:32px; line-height:.95; margin:0; color:#0c2233; }
+.tcard .src { text-align:right; font-size:12px; color:#5c6b76; line-height:1.5; white-space:nowrap; }
+.tcard .src b { color:#11212f; font-weight:600; }
 .tcard .wrap { padding:22px 26px 8px; }
 .tcard .section-label { font-family:"Oswald",sans-serif; text-transform:uppercase; letter-spacing:.18em; font-size:12px; font-weight:600; color:#0c2233; margin:18px 0 8px; display:flex; align-items:center; gap:10px; }
 .tcard .section-label:first-child { margin-top:0; }
