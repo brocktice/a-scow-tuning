@@ -1130,6 +1130,13 @@ function tensionColor(lbs, size) {
   return `hsl(${Math.round(hue)}, 78%, 44%)`;
 }
 
+// compact tension label for the on-diagram arrows (follows the color-by mode)
+function tLabel(lbs, size) {
+  if (lbs == null || isNaN(lbs)) return "—";
+  if (diagState.mode === "pct") return Math.round((lbs / (WIRE_BREAK[size] || 3000)) * 100) + "%";
+  return String(Math.round(lbs));
+}
+
 function diagTune() {
   const setups = activeProfile().config.setups;
   return setups.find((s) => s.id === diagState.tuneId) || setups[0];
@@ -1332,10 +1339,26 @@ function diagramSide(T, prebend, forestay) {
     <line x1="${A2[0].toFixed(1)}" y1="${A2[1].toFixed(1)}" x2="${B2[0].toFixed(1)}" y2="${B2[1].toFixed(1)}" stroke="${RK}" stroke-width="1.2" marker-start="url(#rkArrow)" marker-end="url(#rkArrow)"/>
     <text x="${mid[0].toFixed(1)}" y="${mid[1].toFixed(1)}" class="diag-t" text-anchor="middle" fill="${RK}" transform="rotate(${ang.toFixed(1)} ${mid[0].toFixed(1)} ${mid[1].toFixed(1)})">rake ${fs}″</text>`;
 
+  // Shroud callouts (one arrow each, port·stbd numbers) parked in the left gutter.
+  //  Uppers: between masthead & upper spreader; Inter: between upper & lower spreader;
+  //  Lowers: between lower spreader & deck.
+  const ptUp = [(top[0] + upTip[0]) / 2, (top[1] + upTip[1]) / 2];
+  const yI = (upP[1] + lowP[1]) / 2;
+  const ptInter = [upP[0] + (yI - upP[1]) / (aftCP[1] - upP[1]) * (aftCP[0] - upP[0]), yI];
+  const yL = (lowP[1] + deckY) / 2;
+  const ptLower = [lowP[0] + (yL - lowP[1]) / (fwdCP[1] - lowP[1]) * (fwdCP[0] - lowP[0]), yL];
+  const sideCall = (name, t, tgt) => `
+    <text x="8" y="${(tgt[1] - 4).toFixed(1)}" class="diag-t" text-anchor="start" font-weight="600">${name}</text>
+    <text x="8" y="${(tgt[1] + 8).toFixed(1)}" class="diag-t" text-anchor="start">${tLabel(t.port.lbs, t.size)} · ${tLabel(t.stbd.lbs, t.size)}</text>
+    <line x1="92" y1="${tgt[1].toFixed(1)}" x2="${tgt[0].toFixed(1)}" y2="${tgt[1].toFixed(1)}" stroke="#33424f" stroke-width="1" marker-end="url(#shArrow)"/>`;
+  const shroudCalls = sideCall("Uppers", T.upper, ptUp) + sideCall("Intermediates", T.inter, ptInter) + sideCall("Lowers", T.lower, ptLower);
+
   return `<svg viewBox="0 0 ${W} ${H}" class="diag-svg" role="img" aria-label="Side view">
     <defs>
       <marker id="pbArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
         <path d="M 0,1 L 9,5 L 0,9 z" fill="#c0392b"/></marker>
+      <marker id="shArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0,1 L 9,5 L 0,9 z" fill="#33424f"/></marker>
       <marker id="rkArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
         <path d="M 0,1 L 9,5 L 0,9 z" fill="#1f6fb2"/></marker>
     </defs>
@@ -1366,6 +1389,7 @@ function diagramSide(T, prebend, forestay) {
     <circle cx="${fwdCP[0]}" cy="${fwdCP[1]}" r="3" fill="#33424f"/>
     ${pbMetric}
     ${rakeMetric}
+    ${shroudCalls}
     <text x="${topX - 4}" y="${topY - 6}" class="diag-t" text-anchor="end">masthead</text>
   </svg>`;
 }
@@ -1397,8 +1421,26 @@ function diagramFront(T) {
       ${line(cx, hLow, cpX, deck, c("lower", sd), 3)}`;
   };
 
+  // Per-side shroud callouts: stbd on the left, port on the right, arrows pointing in.
+  const fCalls = (sd, sign, cpX, deck, anchor, lx, ax) => {
+    const upTipX = cx + sign * spUp, lowTipX = cx + sign * spLow;
+    const tUp = [(cx + upTipX) / 2, (topY + tipUpY) / 2];
+    const tIn = [(cx + lowTipX) / 2, (hUp + tipLowY) / 2];
+    const tLo = [(cx + cpX) / 2, (hLow + deck) / 2];
+    const one = (name, id, tgt) => `
+      <text x="${lx}" y="${(tgt[1] - 4).toFixed(1)}" class="diag-t" text-anchor="${anchor}" font-weight="600">${name}</text>
+      <text x="${lx}" y="${(tgt[1] + 8).toFixed(1)}" class="diag-t" text-anchor="${anchor}">${tLabel(T[id][sd].lbs, T[id].size)}</text>
+      <line x1="${ax}" y1="${tgt[1].toFixed(1)}" x2="${tgt[0].toFixed(1)}" y2="${tgt[1].toFixed(1)}" stroke="#33424f" stroke-width="1" marker-end="url(#shArrow)"/>`;
+    return one("Uppers", "upper", tUp) + one("Intermediates", "inter", tIn) + one("Lowers", "lower", tLo);
+  };
+  const frontCalls = fCalls("stbd", -1, cpLX, deckL, "start", 6, 92) + fCalls("port", 1, cpRX, deckR, "end", W - 6, W - 92);
+
   const xl = cx - halfBeam, xr = cx + halfBeam, botY = deckYb + 13;  // flat, shallow scow hull
   return `<svg viewBox="0 0 ${W} ${H}" class="diag-svg" role="img" aria-label="Front view">
+    <defs>
+      <marker id="shArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0,1 L 9,5 L 0,9 z" fill="#33424f"/></marker>
+    </defs>
     <path d="M ${xl},${deckL} L ${xr},${deckR} L ${xr - 2},${botY} Q ${cx},${botY + 3} ${xl + 2},${botY} Z" fill="#eef2f6" stroke="#33424f" stroke-width="2"/>
     <!-- waterline (drawn over the hull so the hull sits IN the water) -->
     <line x1="12" y1="${waterY}" x2="${W - 12}" y2="${waterY}" stroke="#9fc3e0" stroke-width="2"/>
@@ -1408,6 +1450,7 @@ function diagramFront(T) {
     ${line(cx, deckYb, cx, topY, "#2b3742", 5)}
     <circle cx="${cpLX}" cy="${deckL}" r="2.5" fill="#33424f"/>
     <circle cx="${cpRX}" cy="${deckR}" r="2.5" fill="#33424f"/>
+    ${frontCalls}
     <text x="${xl - 12}" y="${deckL - 10}" class="diag-t" text-anchor="end">Stbd</text>
     <text x="${xr + 12}" y="${deckR - 10}" class="diag-t" text-anchor="start">Port</text>
   </svg>`;
