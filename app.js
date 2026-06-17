@@ -958,13 +958,25 @@ function buildTuningCard() {
 
   // rows shown per range / in base. key "intermediates" supplies both the
   // masthead Uppers tension and the Pre-bend (its .in field).
-  const ROWS = [
+  const ALL_ROWS = [
     { key: "intermediates", label: "Uppers", type: "tension" },
     { key: "uppers", label: "Intermediates", type: "tension" },
     { key: "lowers", label: "Lowers", type: "tension" },
     { key: "forestay", label: "Forestay", type: "inches" },
     { key: "intermediates", label: "Pre-bend", type: "inches" }
   ];
+  // drop rows with no data anywhere (e.g. an unmeasured wire) to save space
+  const cellHasValue = (row, c) => {
+    if (!c) return false;
+    if (row.type === "inches") return c.in != null && c.in !== "";
+    return (c.lbs != null && c.lbs !== "") || (c.loos != null && c.loos !== "") || (c.note != null && c.note !== "");
+  };
+  const ROWS = ALL_ROWS.filter((row) =>
+    setups.some((s) =>
+      cellHasValue(row, (s.base || {})[row.key]) ||
+      ranges.some((r) => cellHasValue(row, (s.byWind?.[r.id] || {})[row.key]))
+    )
+  );
 
   const dash = '<span class="muted">—</span>';
   const tension = (wire, cell, isWind) => {
