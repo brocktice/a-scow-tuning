@@ -1288,12 +1288,13 @@ function diagramSide(T, prebend, forestay) {
   // diamonds (uppers) are athwartship: shown edge-on as the bend line just aft of the mast
   const dOff = (p) => [p[0] - 7, p[1]];
 
-  // Boom: horizontal at the light-air setting, then tilts up aft as the mast rakes.
+  // Boom: rotates with the rake (rigid rig — aft end drops as the mast rakes aft);
+  // horizontal at the light-air setting. Independent of pre-bend.
   const rakeLight = 34 + (15.5 - 16) * 10;      // light-air reference rake (forestay 15.5")
   const mastH = deckY - topY;
   const boomTilt = Math.atan2(rakePx, mastH) - Math.atan2(rakeLight, mastH);  // >=0 as rake grows
-  const goosX = mastBaseX, goosY = deckY - 6, boomLen = 80;
-  const boomEnd = [goosX - boomLen * Math.cos(boomTilt), goosY - boomLen * Math.sin(boomTilt)];
+  const goosX = mastBaseX, goosY = deckY - 14, boomLen = 80;
+  const boomEnd = [goosX - boomLen * Math.cos(boomTilt), goosY + boomLen * Math.sin(boomTilt)];
 
   // Pre-bend measurement: straight chord tip->base, arrow at the widest gap.
   const chordMid = [(base[0] + top[0]) / 2, (base[1] + top[1]) / 2];
@@ -1306,23 +1307,37 @@ function diagramSide(T, prebend, forestay) {
     <line x1="${lblX.toFixed(1)}" y1="${lblY.toFixed(1)}" x2="${curveMid[0].toFixed(1)}" y2="${curveMid[1].toFixed(1)}" stroke="#c0392b" stroke-width="1.5" marker-end="url(#pbArrow)"/>
     <text x="${(lblX + 4).toFixed(1)}" y="${(lblY + 4).toFixed(1)}" class="diag-t" text-anchor="start" fill="#c0392b">pre-bend ${prebend}″</text>`;
 
+  // Rake measurement: forestay pin sits above the bow deck plate; distance = rake (in).
+  const fs = forestay != null ? forestay : 16;
+  const pinPx = Math.max(8, 16 + (fs - 15.5) * 14);   // exaggerated so the change is visible
+  const pinY = bowDeckY - pinPx;
+  const rakeMetric = `
+    <line x1="${bowX - 7}" y1="${bowDeckY}" x2="${bowX + 7}" y2="${bowDeckY}" stroke="#33424f" stroke-width="2.5"/>
+    <line x1="${bowX}" y1="${bowDeckY}" x2="${bowX}" y2="${pinY.toFixed(1)}" stroke="#1f6fb2" stroke-width="1.5" marker-start="url(#rkArrow)" marker-end="url(#rkArrow)"/>
+    <circle cx="${bowX}" cy="${pinY.toFixed(1)}" r="2.5" fill="#1f6fb2"/>
+    <text x="${bowX - 11}" y="${(bowDeckY - pinPx / 2 + 3).toFixed(1)}" class="diag-t" text-anchor="end" fill="#1f6fb2">rake ${fs}″</text>`;
+
   return `<svg viewBox="0 0 ${W} ${H}" class="diag-svg" role="img" aria-label="Side view">
-    <defs><marker id="pbArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M 0,1 L 9,5 L 0,9 z" fill="#c0392b"/></marker></defs>
+    <defs>
+      <marker id="pbArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M 0,1 L 9,5 L 0,9 z" fill="#c0392b"/></marker>
+      <marker id="rkArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0,1 L 9,5 L 0,9 z" fill="#1f6fb2"/></marker>
+    </defs>
     <line x1="12" y1="${waterY}" x2="${W - 12}" y2="${waterY}" stroke="#9fc3e0" stroke-width="2"/>
     <!-- foils -->
     <path d="M 222,353 L 230,353 L 226,406 L 222,406 Z" fill="#cdd6de" stroke="#33424f" stroke-width="1.5"/>
     <path d="M 64,353 L 72,353 L 69,388 L 66,388 Z" fill="#cdd6de" stroke="#33424f" stroke-width="1.5"/>
     <!-- hull: long, low scow; bow upswept (right), blunt transom (left), flat bottom -->
     <path d="M 46,344 C 110,343 235,342 ${bowX},${bowDeckY} C 331,337 331,346 320,352 C 300,357 230,357 170,357 C 112,357 64,357 54,356 C 47,355 44,350 46,344 Z" fill="#eef2f6" stroke="#33424f" stroke-width="2"/>
-    <!-- boom (horizontal at light air, tilts with rake) -->
+    <!-- boom (horizontal at light air, rotates aft-down with rake) -->
     ${line(goosX, goosY, boomEnd[0], boomEnd[1], "#5c6b76", 4)}
     <!-- diamonds (uppers / pre-bend wire), edge-on just aft of the mast -->
     <path d="M ${dOff(base)[0].toFixed(1)},${dOff(base)[1].toFixed(1)} Q ${dOff(ctrl)[0].toFixed(1)},${dOff(ctrl)[1].toFixed(1)} ${dOff(top)[0].toFixed(1)},${dOff(top)[1].toFixed(1)}" fill="none" stroke="${c("upper")}" stroke-width="3"/>
     <!-- mast: rake + pre-bend -->
     <path d="M ${base[0].toFixed(1)},${base[1].toFixed(1)} Q ${ctrl[0].toFixed(1)},${ctrl[1].toFixed(1)} ${top[0].toFixed(1)},${top[1].toFixed(1)}" fill="none" stroke="#2b3742" stroke-width="5"/>
-    <!-- forestay -->
-    ${line(topX, topY, bowX, bowDeckY, "#7d8a94", 2)}
+    <!-- forestay (to the pin above the bow deck plate) -->
+    ${line(topX, topY, bowX, pinY, "#7d8a94", 2)}
     <!-- spreaders (athwartship, foreshortened) -->
     ${line(lowP[0], lowP[1], lowP[0] - 13, lowP[1] + 3, "#5c6b76", 3)}
     ${line(upP[0], upP[1], upP[0] - 11, upP[1] + 3, "#5c6b76", 3)}
@@ -1333,8 +1348,8 @@ function diagramSide(T, prebend, forestay) {
     <circle cx="${aftCP[0]}" cy="${aftCP[1]}" r="3" fill="#33424f"/>
     <circle cx="${fwdCP[0]}" cy="${fwdCP[1]}" r="3" fill="#33424f"/>
     ${pbMetric}
+    ${rakeMetric}
     <text x="${topX - 4}" y="${topY - 6}" class="diag-t" text-anchor="end">masthead</text>
-    <text x="${bowX}" y="${bowDeckY - 8}" class="diag-t" text-anchor="middle">bow</text>
   </svg>`;
 }
 
