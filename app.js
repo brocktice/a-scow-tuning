@@ -136,7 +136,7 @@ function seedState() {
 // Stored loos readings are canonical Model A; we convert to/from the active gauge
 // for every display and input across the app. lbs is gauge-neutral and untouched.
 function activeGauge() { return GAUGES.includes(state.gauge) ? state.gauge : "Model A"; }
-function gaugeUnit() { return activeGauge() === "PT-1" ? "PT-1" : "loos"; }
+function gaugeUnit() { return activeGauge(); }  // "Model A" or "PT-1"
 
 // canonical Model A loos -> value shown in the active gauge
 function loosToDisplay(wireRow, loos) {
