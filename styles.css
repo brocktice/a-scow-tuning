@@ -427,8 +427,12 @@ details.ref summary { cursor: pointer; color: var(--muted); }
   .tcard .wrap { padding: 9px 16px 2px; }
   .tcard .foot { padding: 3px 16px 6px; }
   .tcard .section-label { margin: 6px 0 3px; font-size: 10.5px; }
-  .tcard table { font-size: 10.5px; }
-  .tcard th, .tcard td { padding: 1px 8px; line-height: 1.25; }
+  /* pack columns to content and align left so values stay near their labels
+     (whitespace falls on the right instead of stretching columns apart) */
+  .tcard table { font-size: 10.5px; width: auto; }
+  .tcard .boatcol, .tcard .num { min-width: 62px; }
+  .tcard th, .tcard td { padding: 1px 14px; line-height: 1.25; }
+  .tcard td:last-child, .tcard th:last-child { padding-right: 8px; }
   .tcard thead th { font-size: 9.5px; }
   .tcard .num .g, .tcard .range small { font-size: 8.5px; }
   .tcard .setup { margin: 0 0 7px; padding: 6px 11px; }
