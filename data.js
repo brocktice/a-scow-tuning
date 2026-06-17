@@ -23,7 +23,7 @@ const REFERENCE_DATA = {
     uppers: "Intermediates — run only to the upper spreaders, not the masthead. 5/32\" wire. Loos-tensioned, adjusted by wind.",
     lowers: "Lowers — below the spreaders to the chainplate. 5/32\" wire. Loos-tensioned, adjusted by wind.",
     forestay: "Rake, measured in inches from the deck plate.",
-    northSailsWarning: "Wires use North Sails naming: Uppers run from the base up through the spreader tips to the top and control pre-bend; Lowers go to the front of the chainplate, Intermediates to the back."
+    northSailsWarning: "Wires use North Sails naming: Uppers run from the base up through the spreader tips to the top and control pre-bend; Lowers go to the forward holes on the chainplate, Intermediates to the aft."
   },
   validations: [
     {
