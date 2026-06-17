@@ -408,7 +408,9 @@ details.ref summary { cursor: pointer; color: var(--muted); }
 @media print {
   @page { size: landscape; margin: 1cm; }
   @page cardpage { size: portrait; margin: 0.7cm; }
-  body { background: #fff !important; }
+  /* force the whole page white so the dark app theme doesn't print as
+     ink-heavy bands around the content */
+  html, body { background: #fff !important; }
   .toast, .modal-overlay, button { display: none !important; }
 
   /* ---- grid: styled tuning card ---- */
