@@ -3,11 +3,15 @@
 "use strict";
 
 const STORE_KEY = "ascow-tuning/v1";
-const WIRE_KEYS = ["uppers", "lowers", "intermediates", "forestay"];
+// Display order top-of-mast down. North Sails naming: the masthead wire
+// (data key "intermediates") is "Uppers"; the upper-spreader wire (data key
+// "uppers") is "Intermediates". Data keys are unchanged so logged numbers and
+// Loos wire sizes stay correct — only the labels/order differ.
+const WIRE_KEYS = ["intermediates", "uppers", "lowers", "forestay"];
 const WIRE_LABELS = {
-  uppers: "Uppers",
+  intermediates: "Uppers",
+  uppers: "Intermediates",
   lowers: "Lowers",
-  intermediates: "Diamond",
   forestay: "Forestay (rake, in)"
 };
 
@@ -68,7 +72,9 @@ function normalizeState(st) {
   for (const p of st.profiles) {
     const c = (p.config = p.config || clone(REFERENCE_DATA));
     c.meta = c.meta || {};
-    c.terminology = c.terminology || {};
+    // terminology is static reference text (not user-editable) — keep it in sync
+    // with the current naming convention so existing profiles update too.
+    c.terminology = clone(REFERENCE_DATA.terminology);
     c.windRanges = c.windRanges && c.windRanges.length ? c.windRanges : clone(REFERENCE_DATA.windRanges);
     c.setups = Array.isArray(c.setups) ? c.setups : [];
     c.hull = c.hull || clone(REFERENCE_DATA.hull);
@@ -302,7 +308,9 @@ function fmtVal(wire, v) {
   return parts.join("<br>");
 }
 
-/* lowers ≈ 0.5 * uppers validation; returns array of violation strings */
+/* lowers ≈ 0.5 * intermediates validation; returns array of violation strings.
+   (Compares the chainplate wire — data key "uppers", labeled "Intermediates" —
+   against the lowers; the same two physical wires as before.) */
 function validateSetup(setup, ranges) {
   const out = [];
   for (const r of ranges) {
@@ -312,7 +320,7 @@ function validateSetup(setup, ranges) {
       const ideal = 0.5 * up.lbs;
       const ratio = lo.lbs / up.lbs;
       if (ratio < 0.38 || ratio > 0.62) {
-        out.push(`${setup.label} @ ${r.id} kn: lowers ${lo.lbs} vs ½·uppers ${Math.round(ideal)} (ratio ${(ratio).toFixed(2)})`);
+        out.push(`${setup.label} @ ${r.id} kn: lowers ${lo.lbs} vs ½·intermediates ${Math.round(ideal)} (ratio ${(ratio).toFixed(2)})`);
       }
     }
   }
@@ -447,7 +455,7 @@ function renderGrid() {
   // warnings
   const viol = validateSetup(setup, ranges);
   $("#gridWarnings").innerHTML = viol.length
-    ? `<div class="banner warn"><strong>Rule-of-thumb check (lowers ≈ ½ uppers):</strong><ul class="notes-list">${viol.map((v) => `<li>${esc(v)}</li>`).join("")}</ul><span class="muted">Surfaced for verification — not auto-corrected.</span></div>`
+    ? `<div class="banner warn"><strong>Rule-of-thumb check (lowers ≈ ½ intermediates):</strong><ul class="notes-list">${viol.map((v) => `<li>${esc(v)}</li>`).join("")}</ul><span class="muted">Surfaced for verification — not auto-corrected.</span></div>`
     : "";
 
   // header row
@@ -530,7 +538,7 @@ function commitCellEdit(input) {
   // re-render warnings only (avoid losing focus on full re-render)
   const viol = validateSetup(setup, activeProfile().config.windRanges);
   $("#gridWarnings").innerHTML = viol.length
-    ? `<div class="banner warn"><strong>Rule-of-thumb check (lowers ≈ ½ uppers):</strong><ul class="notes-list">${viol.map((v) => `<li>${esc(v)}</li>`).join("")}</ul><span class="muted">Surfaced for verification — not auto-corrected.</span></div>`
+    ? `<div class="banner warn"><strong>Rule-of-thumb check (lowers ≈ ½ intermediates):</strong><ul class="notes-list">${viol.map((v) => `<li>${esc(v)}</li>`).join("")}</ul><span class="muted">Surfaced for verification — not auto-corrected.</span></div>`
     : "";
 }
 
@@ -771,7 +779,8 @@ function settingsSummary(s) {
     if (w.turns) bits.push(`${w.turns}t`);
     return bits.length ? `${lbl}: ${bits.join(" / ")}` : null;
   };
-  parts.push(wireStr(s.uppers, "Uppers"));
+  parts.push(wireStr(s.intermediates, "Uppers"));
+  parts.push(wireStr(s.uppers, "Intermediates"));
   parts.push(wireStr(s.lowers, "Lowers"));
   if (s.forestay) parts.push(`Forestay: ${s.forestay}"`);
   if (s.prebend) parts.push(`Pre-bend: ${s.prebend}"`);
@@ -795,9 +804,9 @@ function perSideSummary(ps) {
     if (!p && !s) return;
     out.push(`${label} P ${p || "—"} · S ${s || "—"}`);
   };
-  add("uppers", "Uppers");
+  add("intermediates", "Uppers");
+  add("uppers", "Intermediates");
   add("lowers", "Lowers");
-  add("intermediates", "Diamonds");
   return out.length ? out.join("  |  ") + `  (${gaugeUnit()}/lbs)` : "";
 }
 
@@ -868,7 +877,7 @@ function renderAnalysis() {
         const di = resolveCell(refSetup, r.id, "intermediates");
         const fs = resolveCell(refSetup, r.id, "forestay");
         refRow = `<tr style="opacity:.75"><td><strong>REF ${esc(refSetup.label)}</strong></td>
-          <td>${fmtVal("uppers", up)}</td><td>${fmtVal("lowers", lo)}</td><td>${fmtVal("intermediates", di)}</td><td>${fmtVal("forestay", fs)}</td><td colspan="2" class="muted">reference grid</td></tr>`;
+          <td>${fmtVal("intermediates", di)}</td><td>${fmtVal("uppers", up)}</td><td>${fmtVal("lowers", lo)}</td><td>${fmtVal("forestay", fs)}</td><td colspan="2" class="muted">reference grid</td></tr>`;
       }
       const sideStr = (wire, sd) => {
         if (sd == null) return null;
@@ -894,9 +903,9 @@ function renderAnalysis() {
         };
         return `<tr>
           <td>${esc(l.date)}${l.wind ? `<br><span class="cell-sub">${esc(l.wind)} kn</span>` : ""}</td>
+          <td>${psCell("intermediates")}</td>
           <td>${psCell("uppers", s.uppers)}</td>
           <td>${psCell("lowers", s.lowers)}</td>
-          <td>${psCell("intermediates")}</td>
           <td>${s.forestay ? esc(s.forestay) + '"' : "—"}${s.prebend ? `<br><span class="cell-sub">pb ${esc(s.prebend)}"</span>` : ""}</td>
           <td>${esc((l.performance || "").slice(0, 80))}${(l.performance || "").length > 80 ? "…" : ""}</td>
           <td>${esc((l.adjustments || "").slice(0, 80))}${(l.adjustments || "").length > 80 ? "…" : ""}</td>
@@ -907,7 +916,7 @@ function renderAnalysis() {
       return `<div style="margin-bottom:18px;">
         <h3 style="margin:0 0 6px;">${label} <span class="pill tape-${r.tape}">${r.band}</span> <span class="analysis-target">${entries.length} entr${entries.length === 1 ? "y" : "ies"}</span></h3>
         <div class="grid-wrap"><table class="grid">
-          <thead><tr><th>Date</th><th>Uppers${sub}</th><th>Lowers${sub}</th><th>Diamonds${sub}</th><th>Forestay / pb</th><th>Performance</th><th>Adjustments</th></tr></thead>
+          <thead><tr><th>Date</th><th>Uppers${sub}</th><th>Intermediates${sub}</th><th>Lowers${sub}</th><th>Forestay / pb</th><th>Performance</th><th>Adjustments</th></tr></thead>
           <tbody>${refRow}${rows}</tbody>
         </table></div>
       </div>`;
@@ -926,8 +935,8 @@ function renderReference() {
   const h = cfg.hull || {};
   $("#metaTable").innerHTML = [
     ["Class", m.class], ["Rig", m.rig], ["Gauge", m.gauge],
-    ["Uppers", cfg.terminology?.uppers], ["Lowers", cfg.terminology?.lowers],
-    ["Pre-bend / diamond", cfg.terminology?.intermediates], ["Forestay", cfg.terminology?.forestay],
+    ["Uppers", cfg.terminology?.intermediates], ["Intermediates", cfg.terminology?.uppers],
+    ["Lowers", cfg.terminology?.lowers], ["Forestay", cfg.terminology?.forestay],
     ["Hull asymmetry", h.asymmetry_in != null ? `${h.asymmetry_in} in higher to ${h.higherSide}` : null],
     ["Pre-bend status", cfg.prebend && !cfg.prebend.confirmed ? "Unconfirmed — replace with your measured values" : null]
   ].filter(([, v]) => v).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join("");

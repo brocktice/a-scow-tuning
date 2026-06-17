@@ -16,19 +16,21 @@ const REFERENCE_DATA = {
     ]
   },
   terminology: {
-    convention: "fleet",
-    uppers: "Cap shroud, masthead to chainplate. Loos-tensioned, adjusted by wind.",
-    lowers: "Lower shroud, below the spreaders to chainplate. Loos-tensioned, adjusted by wind.",
-    intermediates: "Pre-bend / diamond wire. Sets mast pre-bend (see prebend). Some skippers adjust with wind, others fix it.",
+    convention: "North Sails",
+    // Descriptions are keyed by internal data key; the UI shows them under the
+    // North Sails labels (key "intermediates" -> "Uppers", key "uppers" -> "Intermediates").
+    intermediates: "Uppers — cap shroud running to the top of the mast. 1/8\" wire. Sets mast pre-bend (see prebend); Loos-tensioned, adjusted by wind.",
+    uppers: "Intermediates — run only to the upper spreaders, not the masthead. 5/32\" wire. Loos-tensioned, adjusted by wind.",
+    lowers: "Lowers — below the spreaders to the chainplate. 5/32\" wire. Loos-tensioned, adjusted by wind.",
     forestay: "Rake, measured in inches from the deck plate.",
-    northSailsWarning: "The North Sails A Scow guide SWAPS labels: it calls the pre-bend wire the 'uppers' and a chainplate wire the 'intermediates'. This file uses the fleet convention defined above."
+    northSailsWarning: "Wires use North Sails naming: Uppers run to the masthead, Intermediates to the upper spreaders, Lowers below the spreaders."
   },
   validations: [
     {
-      id: "lowers-half-uppers",
-      expr: "lowers.lbs ~= 0.5 * uppers.lbs",
+      id: "lowers-half-intermediates",
+      expr: "lowers.lbs ~= 0.5 * intermediates.lbs",
       severity: "warn",
-      note: "Rule of thumb: lowers ~= 1/2 uppers. Data does NOT satisfy this everywhere. Surface violations to re-verify; do not auto-correct."
+      note: "Rule of thumb: lowers ~= 1/2 intermediates. Data does NOT satisfy this everywhere. Surface violations to re-verify; do not auto-correct."
     }
   ],
   windRanges: [

@@ -88,6 +88,15 @@
             <div class="ps-wire">
               <div class="ps-name">Uppers</div>
               <div class="ps-grid">
+                <label><span class="ps-cap">Port <span class="ps-unit">loos</span></span><input type="text" id="diaPortLoos" /></label>
+                <label><span class="ps-cap">Port lbs</span><input type="text" id="diaPortLbs" placeholder="lbs" /></label>
+                <label><span class="ps-cap">Stbd <span class="ps-unit">loos</span></span><input type="text" id="diaStbdLoos" /></label>
+                <label><span class="ps-cap">Stbd lbs</span><input type="text" id="diaStbdLbs" placeholder="lbs" /></label>
+              </div>
+            </div>
+            <div class="ps-wire">
+              <div class="ps-name">Intermediates</div>
+              <div class="ps-grid">
                 <label><span class="ps-cap">Port <span class="ps-unit">loos</span></span><input type="text" id="upPortLoos" /></label>
                 <label><span class="ps-cap">Port lbs</span><input type="text" id="upPortLbs" placeholder="lbs" /></label>
                 <label><span class="ps-cap">Stbd <span class="ps-unit">loos</span></span><input type="text" id="upStbdLoos" /></label>
@@ -101,15 +110,6 @@
                 <label><span class="ps-cap">Port lbs</span><input type="text" id="loPortLbs" placeholder="lbs" /></label>
                 <label><span class="ps-cap">Stbd <span class="ps-unit">loos</span></span><input type="text" id="loStbdLoos" /></label>
                 <label><span class="ps-cap">Stbd lbs</span><input type="text" id="loStbdLbs" placeholder="lbs" /></label>
-              </div>
-            </div>
-            <div class="ps-wire">
-              <div class="ps-name">Diamonds</div>
-              <div class="ps-grid">
-                <label><span class="ps-cap">Port <span class="ps-unit">loos</span></span><input type="text" id="diaPortLoos" /></label>
-                <label><span class="ps-cap">Port lbs</span><input type="text" id="diaPortLbs" placeholder="lbs" /></label>
-                <label><span class="ps-cap">Stbd <span class="ps-unit">loos</span></span><input type="text" id="diaStbdLoos" /></label>
-                <label><span class="ps-cap">Stbd lbs</span><input type="text" id="diaStbdLbs" placeholder="lbs" /></label>
               </div>
             </div>
 
@@ -167,8 +167,8 @@
       <div class="row" style="margin-bottom:10px;">
         <div class="field grow"><label>Wire</label>
           <select id="convWire">
-            <option value="5/32">Uppers / Lowers — 5/32"</option>
-            <option value="1/8">Diamonds — 1/8"</option>
+            <option value="5/32">Intermediates / Lowers — 5/32"</option>
+            <option value="1/8">Uppers — 1/8"</option>
           </select>
         </div>
       </div>
