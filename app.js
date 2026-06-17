@@ -432,10 +432,14 @@ function renderGrid() {
   if (!setups.length) { $("#gridHost").innerHTML = '<p class="empty">No tunes. Add one.</p>'; $("#setupTabs").innerHTML = ""; $("#setupNotes").innerHTML = ""; return; }
   if (!setups.some((s) => s.id === activeSetupId)) activeSetupId = setups[0].id;
 
-  // setup tabs
+  // setup tabs + per-tune actions
   $("#setupTabs").innerHTML = setups
     .map((s) => `<button data-setup="${s.id}" class="${s.id === activeSetupId ? "active" : ""}">${esc(s.label)}</button>`)
-    .join("");
+    .join("") +
+    `<span class="tab-actions">
+       <button class="sm ghost" id="btnRenameSetup" title="Rename the selected tune">✎ Rename</button>
+       <button class="sm ghost" id="btnDupSetup" title="Duplicate the selected tune">⧉ Duplicate</button>
+     </span>`;
 
   const setup = setups.find((s) => s.id === activeSetupId);
   const ranges = cfg.windRanges;
@@ -537,8 +541,6 @@ function renderSetupNotes(setup) {
       <h2 style="font-size:14px;margin:0;">${esc(setup.label)} — notes</h2>
       <div>
         <button class="sm" id="btnAddNote">+ Note</button>
-        <button class="sm ghost" id="btnRenameSetup">Rename tune</button>
-        <button class="sm ghost" id="btnDupSetup">Duplicate tune</button>
         <button class="sm danger" id="btnDelSetup">Delete this tune</button>
       </div>
     </div>
@@ -1028,6 +1030,8 @@ function bindEvents() {
 
   // grid: setup tabs + cell edits (event delegation)
   $("#setupTabs").addEventListener("click", (e) => {
+    if (e.target.closest("#btnRenameSetup")) { renameSetup(); return; }
+    if (e.target.closest("#btnDupSetup")) { duplicateSetup(); return; }
     const b = e.target.closest("button[data-setup]");
     if (b) { activeSetupId = b.dataset.setup; renderGrid(); }
   });
@@ -1043,10 +1047,6 @@ function bindEvents() {
     } else if (e.target.dataset.delnote != null) {
       const setup = activeProfile().config.setups.find((s) => s.id === activeSetupId);
       setup.notes.splice(+e.target.dataset.delnote, 1); save(); renderSetupNotes(setup);
-    } else if (e.target.id === "btnRenameSetup") {
-      renameSetup();
-    } else if (e.target.id === "btnDupSetup") {
-      duplicateSetup();
     } else if (e.target.id === "btnDelSetup") {
       const cfg = activeProfile().config;
       if (cfg.setups.length <= 1) { alert("Keep at least one tune."); return; }

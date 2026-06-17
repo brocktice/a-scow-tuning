@@ -213,8 +213,9 @@ table.grid tbody tr:nth-child(even) td { background: rgba(255,255,255,.02); }
 .cell-edit { display: flex; flex-wrap: wrap; gap: 4px; }
 .cell-edit label { font-size: 10px; color: var(--muted); display: flex; flex-direction: column; gap: 1px; }
 
-.setup-tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+.setup-tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
 .setup-tabs button.active { background: var(--accent-2); border-color: var(--accent-2); color: #fff; }
+.setup-tabs .tab-actions { display: flex; gap: 6px; margin-left: auto; }
 
 /* Log entries */
 .log-entry {
