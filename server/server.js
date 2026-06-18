@@ -10,7 +10,7 @@ import {
   createSession, getSessionUser, destroySession,
   membership, listBoatsForUser
 } from "./db.js";
-import { sendLoginLink, sendInvite } from "./mail.js";
+import { sendLoginLink, sendInvite, sendAppInvite } from "./mail.js";
 
 const PORT = parseInt(process.env.PORT || "8790", 10);
 const APP_BASE_URL = (process.env.APP_BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, "");
@@ -121,7 +121,24 @@ app.post("/api/auth/logout", (req, res) => {
 app.get("/api/me", (req, res) => {
   const u = currentUser(req);
   if (!u) return res.status(401).json({ error: "auth required" });
-  res.json({ email: u.email, id: u.id });
+  res.json({ email: u.email, id: u.id, admin: ADMIN_EMAILS.has(u.email) });
+});
+
+// admin-only: invite someone to use the app standalone (their own boats, no boat shared)
+app.post("/api/admin/invite", requireUser, (req, res) => {
+  if (!ADMIN_EMAILS.has(req.user.email)) return res.status(403).json({ error: "admins only" });
+  const email = normalizeEmail(req.body?.email);
+  if (!isEmail(email)) return res.status(400).json({ error: "invalid email" });
+  // create the account so they can also self-serve a login link later, then email a welcome link
+  getOrCreateUser(email);
+  const token = newToken();
+  const t = now();
+  db.prepare(
+    "INSERT INTO magic_tokens (token, email, purpose, created_at, expires_at) VALUES (?, ?, 'login', ?, ?)"
+  ).run(token, email, t, t + INVITE_TTL);
+  sendAppInvite(email, `${APP_BASE_URL}/api/auth/callback?token=${token}`, req.user.email)
+    .catch((e) => console.error("mail error", e));
+  res.json({ ok: true });
 });
 
 // ---------- boats ----------

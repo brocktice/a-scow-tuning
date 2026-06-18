@@ -472,10 +472,23 @@ async function requestLogin() {
   $("#loginForm").reset();
 }
 function showLogin() { document.body.className = "logged-out"; }
-function showApp(email) {
+function showApp(email, admin) {
   document.body.className = "";
   const el = $("#whoami");
   if (el) { el.hidden = false; el.textContent = email; }
+  const inv = $("#btnInvite");
+  if (inv) inv.hidden = !admin;
+}
+
+async function inviteToApp() {
+  const email = (prompt("Email to invite to the app (they get their own boats):") || "").trim();
+  if (!email) return;
+  try {
+    const r = await apiSend("/api/admin/invite", "POST", { email });
+    if (r.ok) alert(`Invite sent to ${email}.`);
+    else if (r.status === 403) alert("Only admins can invite people to the app.");
+    else alert("Couldn’t send the invite. Check the email address and try again.");
+  } catch (e) { alert("Couldn’t send the invite (network error)."); }
 }
 
 /* ============================================================
@@ -1604,6 +1617,7 @@ function bindEvents() {
   $("#btnImport").addEventListener("click", () => $("#importFile").click());
   $("#importFile").addEventListener("change", (e) => { if (e.target.files[0]) { importProfile(e.target.files[0]); e.target.value = ""; } });
   $("#btnLogout").addEventListener("click", async () => { await apiSend("/api/auth/logout", "POST").catch(() => {}); location.reload(); });
+  $("#btnInvite").addEventListener("click", inviteToApp);
 
   // sharing
   $("#btnShare").addEventListener("click", openShare);
@@ -1702,7 +1716,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let me = null;
   try { const r = await apiGet("/api/me"); if (r.ok) me = await r.json(); } catch (e) {}
   if (!me) { showLogin(); return; }
-  showApp(me.email);
+  showApp(me.email, me.admin);
 
   // ?boat=<id> arrives from an accepted invite link
   const params = new URLSearchParams(location.search);

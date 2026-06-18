@@ -36,6 +36,17 @@ export function sendLoginLink(to, url) {
   return send(to, "Sign in to A Scow Tuner", text, html);
 }
 
+export function sendAppInvite(to, url, inviterEmail) {
+  const subject = "You're invited to A Scow Tuner";
+  const text = `${inviterEmail} invited you to use A Scow Tuner, a rig tuning log for A Scows.\n\n` +
+    `Sign in to get started (you can create your own boats):\n${url}\n\n` +
+    `This link is single-use and expires in 7 days. After that you can request a new one from the sign-in page.`;
+  const html = `<p><strong>${inviterEmail}</strong> invited you to use <strong>A Scow Tuner</strong>, ` +
+    `a rig tuning log for A Scows.</p><p><a href="${url}">Sign in to get started</a> — you can create your own boats.</p>` +
+    `<p style="color:#667">This link is single-use and expires in 7 days. After that you can request a new one from the sign-in page.</p>`;
+  return send(to, subject, text, html);
+}
+
 export function sendInvite(to, url, boatName, inviterEmail) {
   const subject = `You're invited to tune "${boatName}"`;
   const text = `${inviterEmail} invited you to help tune the boat "${boatName}" on A Scow Tuner.\n\n` +
