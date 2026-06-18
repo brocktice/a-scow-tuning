@@ -1373,14 +1373,19 @@ function diagramSide(T, prebend, forestay) {
   const goosX = mastBaseX, goosY = deckY - 14, boomLen = 80;
   const boomEnd = [goosX - boomLen * Math.cos(boomTilt), goosY + boomLen * Math.sin(boomTilt)];
 
-  // Pre-bend measurement: straight chord tip->base, arrow at the widest gap.
-  const chordMid = [(base[0] + top[0]) / 2, (base[1] + top[1]) / 2];
+  // Pre-bend measurement: straight chord tip->base, gap line perpendicular to the
+  // chord at the curve's widest point (t=0.5, the max deflection of a quadratic bezier).
   const curveMid = qbez(base, ctrl, top, 0.5);
+  const cdx = top[0] - base[0], cdy = top[1] - base[1];
+  const clen = Math.hypot(cdx, cdy) || 1;
+  const ux = cdx / clen, uy = cdy / clen;            // chord unit vector
+  const proj = (curveMid[0] - base[0]) * ux + (curveMid[1] - base[1]) * uy;
+  const chordFoot = [base[0] + ux * proj, base[1] + uy * proj]; // perpendicular foot on chord
   const showPB = prebend != null && prebend > 0;
   const lblX = curveMid[0] + 56, lblY = curveMid[1] - 2;
   const pbMetric = !showPB ? "" : `
     <line x1="${base[0].toFixed(1)}" y1="${base[1]}" x2="${top[0].toFixed(1)}" y2="${top[1]}" stroke="#9aa6b0" stroke-width="1.5" stroke-dasharray="5 4"/>
-    <line x1="${chordMid[0].toFixed(1)}" y1="${chordMid[1].toFixed(1)}" x2="${curveMid[0].toFixed(1)}" y2="${curveMid[1].toFixed(1)}" stroke="#c0392b" stroke-width="1.5"/>
+    <line x1="${chordFoot[0].toFixed(1)}" y1="${chordFoot[1].toFixed(1)}" x2="${curveMid[0].toFixed(1)}" y2="${curveMid[1].toFixed(1)}" stroke="#c0392b" stroke-width="1.5"/>
     <line x1="${lblX.toFixed(1)}" y1="${lblY.toFixed(1)}" x2="${curveMid[0].toFixed(1)}" y2="${curveMid[1].toFixed(1)}" stroke="#c0392b" stroke-width="1.5" marker-end="url(#pbArrow)"/>
     <text x="${(lblX + 4).toFixed(1)}" y="${(lblY + 4).toFixed(1)}" class="diag-t" text-anchor="start" fill="#c0392b">pre-bend ${prebend}″</text>`;
 
