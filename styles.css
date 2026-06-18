@@ -488,3 +488,34 @@ details.ref summary { cursor: pointer; color: var(--muted); }
   body[data-print="log"] input, body[data-print="log"] textarea,
   body[data-print="analysis"] input, body[data-print="analysis"] textarea { border: none !important; background: transparent !important; color: #000 !important; padding: 0 !important; }
 }
+
+/* ===== auth + sharing ===== */
+/* hide app chrome until /api/me resolves; then either login or app shows */
+body.auth-pending > header.app,
+body.auth-pending > nav.tabs,
+body.auth-pending > main,
+body.auth-pending #loginScreen { display: none; }
+
+#loginScreen { display: none; }
+body.logged-out > header.app,
+body.logged-out > nav.tabs,
+body.logged-out > main,
+body.logged-out #printCard,
+body.logged-out .toast { display: none; }
+body.logged-out #loginScreen { display: flex; }
+
+.login-screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.login-card { background: var(--card, #16222e); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 28px 26px; max-width: 380px; width: 100%; box-shadow: 0 10px 40px rgba(0,0,0,.4); }
+.login-card h1 { margin: 0 0 6px; font-size: 22px; }
+.login-sub { color: var(--muted, #8aa0b2); font-size: 14px; margin: 0 0 16px; line-height: 1.45; }
+.login-card form { display: flex; flex-direction: column; gap: 10px; }
+.login-card input[type="email"] { padding: 10px 12px; font-size: 15px; }
+.login-msg { color: #6fcf97; font-size: 13px; margin: 12px 0 0; min-height: 1em; }
+
+.share-list { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.share-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 10px; background: rgba(255,255,255,.04); border-radius: 6px; font-size: 14px; }
+.share-list li.pending { opacity: .75; }
+.share-list .role { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted, #8aa0b2); margin-left: 6px; }
+.share-invite { display: flex; gap: 8px; align-items: center; }
+.share-invite input[type="email"] { flex: 1; padding: 8px 10px; }
+.share-invite select { padding: 8px; }

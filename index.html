@@ -9,7 +9,20 @@
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body>
+<body class="auth-pending">
+  <!-- sign-in (magic link, invite-only) -->
+  <div id="loginScreen" class="login-screen">
+    <div class="login-card">
+      <h1>⛵ A&nbsp;Scow Rig Tuning</h1>
+      <p class="login-sub">Sign in with your email. Access is invite-only — you'll get a one-time sign-in link.</p>
+      <form id="loginForm">
+        <input type="email" id="loginEmail" placeholder="you@example.com" required autocomplete="email" />
+        <button class="primary" type="submit">Email me a sign-in link</button>
+      </form>
+      <p id="loginMsg" class="login-msg" aria-live="polite"></p>
+    </div>
+  </div>
+
   <header class="app">
     <h1>⛵ A&nbsp;Scow Rig Tuning <span class="sub">log &amp; config editor</span></h1>
     <div class="profile-bar">
@@ -20,12 +33,14 @@
       </label>
       <button id="btnConvert" class="sm ghost" title="Loos / pounds converter">⇄ Convert</button>
       <span id="syncStatus" class="sync" title="Sync status" hidden></span>
-      <select id="profileSelect" title="Active boat profile"></select>
+      <select id="profileSelect" title="Active boat"></select>
       <button id="btnNewProfile" class="sm">+ New boat</button>
+      <button id="btnShare" class="sm" hidden>Share</button>
       <button id="btnRenameProfile" class="sm ghost">Rename</button>
       <button id="btnExport" class="sm ghost">Export</button>
       <button id="btnImport" class="sm ghost">Import</button>
       <button id="btnDeleteProfile" class="sm danger">Delete</button>
+      <button id="btnLogout" class="sm ghost">Log out</button>
       <input type="file" id="importFile" accept="application/json" hidden />
     </div>
   </header>
@@ -198,6 +213,18 @@
 
   <!-- print-only: styled tuning card (filled by printGridCard) -->
   <div id="printCard"></div>
+
+  <!-- Share boat popup -->
+  <div class="modal-overlay" id="shareModal" hidden>
+    <div class="modal" role="dialog" aria-label="Share boat">
+      <div class="modal-head">
+        <h2>Share <span id="shareBoatName"></span></h2>
+        <button class="modal-x" id="shareClose" aria-label="Close">✕</button>
+      </div>
+      <p class="hint" style="margin:0 0 10px;">Invite crew by email. They'll get a sign-in link and land on this boat. Editors can change tunes &amp; logs; owners can also invite and remove crew.</p>
+      <div id="shareBody"></div>
+    </div>
+  </div>
 
   <!-- Loos / pounds converter popup -->
   <div class="modal-overlay" id="convertModal" hidden>

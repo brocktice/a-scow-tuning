@@ -31,16 +31,21 @@ function toast(msg) {
   toast._t = setTimeout(() => t.classList.remove("show"), 1800);
 }
 
-/* ---------- persistence ---------- */
-let state = load();
+/* ---------- gauge preference (per device) ---------- */
+const GAUGE_KEY = "ascow-tuning/gauge";
+let gaugePref = (() => {
+  try { const g = localStorage.getItem(GAUGE_KEY); return GAUGES.includes(g) ? g : "Model A"; }
+  catch (e) { return "Model A"; }
+})();
 
-function load() {
-  try {
-    const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return normalizeState(JSON.parse(raw));
-  } catch (e) { console.warn("load failed", e); }
-  return seedState();
-}
+/* ---------- boats (server-backed, shared) ---------- */
+let boats = [];          // metadata: [{ id, name, rev, role }]
+let activeBoatId = null;
+let active = null;       // loaded boat: { id, name, role, rev, config, log }
+const ACTIVE_BOAT_KEY = "ascow-tuning/activeBoat";
+const boatCacheKey = (id) => "ascow-tuning/boat/" + id;
+
+function activeProfile() { return active; }
 
 // Ensure every profile's config has the nested shapes the UI writes into.
 // Strip personal attribution (names, dates, transcription notes) from a config,
@@ -67,81 +72,51 @@ function scrubAttribution(c) {
   }
 }
 
-function normalizeState(st) {
-  if (!st || !Array.isArray(st.profiles)) return seedState();
-  for (const p of st.profiles) {
-    const c = (p.config = p.config || clone(REFERENCE_DATA));
-    c.meta = c.meta || {};
-    // terminology is static reference text (not user-editable) — keep it in sync
-    // with the current naming convention so existing profiles update too.
-    c.terminology = clone(REFERENCE_DATA.terminology);
-    c.windRanges = c.windRanges && c.windRanges.length ? c.windRanges : clone(REFERENCE_DATA.windRanges);
-    c.setups = Array.isArray(c.setups) ? c.setups : [];
-    c.hull = c.hull || clone(REFERENCE_DATA.hull);
-    c.prebend = c.prebend || clone(REFERENCE_DATA.prebend);
-    c.prebend.byBand = c.prebend.byBand || {};
-    c.globalNotes = c.globalNotes || [];
-    scrubAttribution(c);
-    const pb = c.prebend.byBand || {};
-    const bandBend = (band) => {
-      const v = band === "light" ? pb.light : band === "heavy" ? pb.heavy : pb.allPurpose;
-      return v == null ? "" : Array.isArray(v) ? v.join("–") : String(v);
-    };
-    for (const s of c.setups) {
-      s.base = s.base || {};
-      s.byWind = s.byWind || {};
-      s.notes = s.notes || [];
-      // migrate: seed the pre-bend/diamond row from the reference byBand if absent
-      if (s.base.intermediates === undefined) s.base.intermediates = { in: bandBend("medium") };
-      for (const r of c.windRanges) {
-        s.byWind[r.id] = s.byWind[r.id] || {};
-        if (s.byWind[r.id].intermediates === undefined) s.byWind[r.id].intermediates = { in: bandBend(r.band) };
-      }
+// Ensure a single boat's config has the nested shapes the UI writes into.
+function normalizeConfig(c) {
+  c = c || clone(REFERENCE_DATA);
+  c.meta = c.meta || {};
+  // terminology is static reference text (not user-editable) — keep it in sync.
+  c.terminology = clone(REFERENCE_DATA.terminology);
+  c.windRanges = c.windRanges && c.windRanges.length ? c.windRanges : clone(REFERENCE_DATA.windRanges);
+  c.setups = Array.isArray(c.setups) ? c.setups : [];
+  c.hull = c.hull || clone(REFERENCE_DATA.hull);
+  c.prebend = c.prebend || clone(REFERENCE_DATA.prebend);
+  c.prebend.byBand = c.prebend.byBand || {};
+  c.globalNotes = c.globalNotes || [];
+  scrubAttribution(c);
+  const pb = c.prebend.byBand || {};
+  const bandBend = (band) => {
+    const v = band === "light" ? pb.light : band === "heavy" ? pb.heavy : pb.allPurpose;
+    return v == null ? "" : Array.isArray(v) ? v.join("–") : String(v);
+  };
+  for (const s of c.setups) {
+    s.base = s.base || {};
+    s.byWind = s.byWind || {};
+    s.notes = s.notes || [];
+    // migrate: seed the pre-bend/diamond row from the reference byBand if absent
+    if (s.base.intermediates === undefined) s.base.intermediates = { in: bandBend("medium") };
+    for (const r of c.windRanges) {
+      s.byWind[r.id] = s.byWind[r.id] || {};
+      if (s.byWind[r.id].intermediates === undefined) s.byWind[r.id].intermediates = { in: bandBend(r.band) };
     }
-    p.log = Array.isArray(p.log) ? p.log : [];
   }
-  if (!st.profiles.some((p) => p.id === st.activeProfileId)) st.activeProfileId = st.profiles[0].id;
-
-  // one-time: log entries recorded before the gauge feature hold raw PT-1 readings
-  // in canonical (Model A) slots. Convert them once, and default this user to the
-  // PT-1 gauge they actually use so the numbers read as originally written down.
-  if (!st.logsGaugeMigrated) {
-    let migrated = false;
-    for (const p of st.profiles) {
-      for (const entry of (p.log || [])) {
-        const ps = entry.perSide; if (!ps) continue;
-        for (const wireRow of ["uppers", "lowers", "intermediates"]) {
-          const w = ps[wireRow]; if (!w) continue;
-          for (const sideKey of ["port", "stbd"]) {
-            const sd = w[sideKey];
-            if (!sd || sd.loos === "" || sd.loos == null) continue;
-            const conv = convertReading("PT-1", "Model A", WIRE_SIZE[wireRow], sd.loos);
-            if (conv != null) { sd.loos = conv; migrated = true; }
-          }
-        }
-      }
-    }
-    if (migrated) st.gauge = "PT-1";
-    st.logsGaugeMigrated = true;
-  }
-
-  if (!GAUGES.includes(st.gauge)) st.gauge = "Model A";
-  return st;
+  return c;
 }
 
-function seedState() {
-  const id = uid();
-  return {
-    activeProfileId: id,
-    gauge: "Model A",
-    profiles: [makeProfile("Catapult IV", id)]
-  };
+function seedConfig() { return normalizeConfig(clone(REFERENCE_DATA)); }
+
+function seedBoatData(name) {
+  const config = clone(REFERENCE_DATA);
+  config.meta = config.meta || {};
+  config.meta.boat = name;
+  return { config: normalizeConfig(config), log: [] };
 }
 
 /* ---------- gauge (Model A / PT-1) ---------- */
 // Stored loos readings are canonical Model A; we convert to/from the active gauge
 // for every display and input across the app. lbs is gauge-neutral and untouched.
-function activeGauge() { return GAUGES.includes(state.gauge) ? state.gauge : "Model A"; }
+function activeGauge() { return GAUGES.includes(gaugePref) ? gaugePref : "Model A"; }
 function gaugeUnit() { return activeGauge(); }  // "Model A" or "PT-1"
 
 // canonical Model A loos -> value shown in the active gauge
@@ -159,19 +134,6 @@ function loosToStore(wireRow, entered) {
   return v == null ? null : v;
 }
 
-function makeProfile(name, id) {
-  const ref = clone(REFERENCE_DATA);
-  ref.meta.boat = name;
-  return {
-    id: id || uid(),
-    name,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    config: ref,   // editable copy of reference data
-    log: []
-  };
-}
-
 let savedFlashTimer = null;
 function flashSaved() {
   const el = $("#savedFlash");
@@ -182,97 +144,61 @@ function flashSaved() {
   savedFlashTimer = setTimeout(() => { el.classList.remove("show"); }, 1400);
 }
 
+// cache the active boat locally, then schedule a debounced server save
 function save() {
-  const p = activeProfile();
-  if (p) p.updatedAt = new Date().toISOString();
+  if (!active) return;
   try {
-    localStorage.setItem(STORE_KEY, JSON.stringify(state));
-  } catch (e) {
-    alert("Could not save to browser storage: " + e.message);
-  }
+    localStorage.setItem(boatCacheKey(active.id), JSON.stringify({
+      id: active.id, name: active.name, role: active.role, rev: active.rev,
+      data: { config: active.config, log: active.log }
+    }));
+  } catch (e) { /* quota */ }
   flashSaved();
   scheduleSync();
 }
 
-/* ---------- server sync (shared storage across clients) ---------- */
-const SYNC_ENABLED = location.protocol === "http:" || location.protocol === "https:";
-const API_URL = "/api/store";
-let serverRev = null;
+/* ---------- server sync ---------- */
 let syncTimer = null;
 
 function setSyncStatus(s, title) {
   const el = $("#syncStatus");
   if (!el) return;
-  if (!SYNC_ENABLED) { el.hidden = true; return; }
   el.hidden = false;
   el.className = "sync " + s;
   el.textContent = { synced: "Synced", saving: "Saving…", offline: "Offline" }[s] || s;
   if (title) el.title = title;
 }
 
-async function pullFromServer() {
-  if (!SYNC_ENABLED) { setSyncStatus("offline", "Open via the server to sync across devices"); return false; }
-  try {
-    const r = await fetch(API_URL, { cache: "no-store" });
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    const j = await r.json();
-    serverRev = j.rev;
-    if (j.store && Array.isArray(j.store.profiles) && j.store.profiles.length) {
-      state = normalizeState(j.store);
-      try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
-      setSyncStatus("synced", "Loaded from server (rev " + serverRev + ")");
-      return true;
-    }
-    // server empty — seed it from this client's local data
-    await pushToServer();
-    return false;
-  } catch (e) {
-    setSyncStatus("offline", "Server unreachable — using this device only");
-    return false;
-  }
+function apiGet(path) { return fetch(path, { cache: "no-store" }); }
+function apiSend(path, method, body) {
+  return fetch(path, {
+    method, cache: "no-store",
+    headers: { "Content-Type": "application/json" },
+    body: body == null ? undefined : JSON.stringify(body)
+  });
 }
 
 function scheduleSync() {
-  if (!SYNC_ENABLED) return;
   clearTimeout(syncTimer);
   setSyncStatus("saving");
-  syncTimer = setTimeout(pushToServer, 600);
+  syncTimer = setTimeout(pushActive, 600);
 }
 
-async function pushToServer() {
-  if (!SYNC_ENABLED) return;
+async function pushActive() {
+  if (!active) return;
   try {
-    const r = await fetch(API_URL, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(state)
+    const r = await apiSend("/api/boats/" + active.id, "PUT", {
+      name: active.name, data: { config: active.config, log: active.log }
     });
     if (!r.ok) throw new Error("HTTP " + r.status);
     const j = await r.json();
-    serverRev = j.rev;
-    setSyncStatus("synced", "Saved to server (rev " + serverRev + ")");
+    active.rev = j.rev;
+    const m = boats.find((b) => b.id === active.id);
+    if (m) { m.rev = j.rev; m.name = active.name; }
+    setSyncStatus("synced", "Saved (rev " + j.rev + ")");
   } catch (e) {
     setSyncStatus("offline", "Save failed — kept on this device, will retry on next change");
   }
-}
-
-// Show the signed-in crew (via Cloudflare Access) + a logout link, if present.
-async function showIdentity() {
-  if (!SYNC_ENABLED) return;
-  try {
-    const r = await fetch("/cdn-cgi/access/get-identity", { cache: "no-store" });
-    if (!r.ok) return;                 // Access not enabled -> nothing to show
-    const id = await r.json();
-    const who = id.email || id.name;
-    if (!who) return;
-    const el = $("#whoami");
-    el.hidden = false;
-    el.innerHTML = esc(who) + ' · <a href="/cdn-cgi/access/logout">log out</a>';
-  } catch (e) { /* not behind Access */ }
-}
-
-function activeProfile() {
-  return state.profiles.find((p) => p.id === state.activeProfileId) || state.profiles[0];
 }
 
 // wind-band pill (Light=blue, Medium=yellow, Heavy=red)
@@ -334,71 +260,125 @@ function validateSetup(setup, ranges) {
 }
 
 /* ============================================================
-   PROFILES
+   BOATS (server-backed, shared)
    ============================================================ */
 function renderProfileSelect() {
   const sel = $("#profileSelect");
-  sel.innerHTML = state.profiles
-    .map((p) => `<option value="${p.id}" ${p.id === state.activeProfileId ? "selected" : ""}>${esc(p.name)}</option>`)
+  if (!boats.length) sel.innerHTML = `<option>(no boats)</option>`;
+  else sel.innerHTML = boats
+    .map((b) => `<option value="${b.id}" ${b.id === activeBoatId ? "selected" : ""}>${esc(b.name)}</option>`)
     .join("");
+  const owner = !!active && active.role === "owner";
+  const rn = $("#btnRenameProfile"), del = $("#btnDeleteProfile"), share = $("#btnShare"), exp = $("#btnExport");
+  if (rn) rn.disabled = !owner;
+  if (del) del.disabled = !owner;
+  if (exp) exp.disabled = !active;
+  if (share) share.hidden = !active;
 }
 
-function setActiveProfile(id) {
-  state.activeProfileId = id;
-  save();
-  renderAll();
+function applyBoatData(meta, data) {
+  const config = data && data.config ? data.config : seedConfig();
+  normalizeConfig(config);
+  active = {
+    id: meta.id, name: meta.name, role: meta.role, rev: meta.rev,
+    config, log: Array.isArray(data && data.log) ? data.log : []
+  };
+  activeBoatId = meta.id;
 }
 
-function newProfile() {
-  const name = prompt("Boat name for the new profile:", "");
-  if (!name) return;
-  const startBlank = state.profiles.length > 0 &&
-    confirm("OK = start from the reference grid.\nCancel = copy the current boat's settings & wind/rig config (log not copied).");
-  let p;
-  if (startBlank) {
-    p = makeProfile(name);
-  } else {
-    p = clone(activeProfile());
-    p.id = uid();
-    p.name = name;
-    p.config.meta.boat = name;
-    p.log = [];
-    p.createdAt = p.updatedAt = new Date().toISOString();
+async function loadBoats(preferId) {
+  const r = await apiGet("/api/boats");
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  boats = (await r.json()).boats || [];
+  if (!boats.length) { active = null; activeBoatId = null; return; }
+  let pick = preferId || activeBoatId;
+  try { pick = pick || localStorage.getItem(ACTIVE_BOAT_KEY); } catch (e) {}
+  if (!boats.some((b) => b.id === pick)) pick = boats[0].id;
+  await selectBoat(pick);
+}
+
+async function selectBoat(id) {
+  activeBoatId = id;
+  try { localStorage.setItem(ACTIVE_BOAT_KEY, id); } catch (e) {}
+  // instant render from cache if present
+  try {
+    const cached = JSON.parse(localStorage.getItem(boatCacheKey(id)) || "null");
+    if (cached) applyBoatData(cached, cached.data);
+  } catch (e) {}
+  setSyncStatus("saving", "Loading…");
+  try {
+    const r = await apiGet("/api/boats/" + id);
+    if (r.status === 404) { boats = boats.filter((b) => b.id !== id); return loadBoats(); }
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const b = await r.json();
+    applyBoatData(b, b.data);
+    try { localStorage.setItem(boatCacheKey(id), JSON.stringify(b)); } catch (e) {}
+    setSyncStatus("synced", "Loaded " + b.name + " (rev " + b.rev + ")");
+  } catch (e) {
+    setSyncStatus("offline", "Server unreachable — using cached copy");
   }
-  state.profiles.push(p);
-  state.activeProfileId = p.id;
-  save();
-  renderAll();
-  toast("Created “" + name + "”");
 }
 
-function renameProfile() {
-  const p = activeProfile();
-  const name = prompt("Rename boat profile:", p.name);
+async function setActiveProfile(id) {
+  await selectBoat(id);
+  renderAll();
+}
+
+async function newProfile() {
+  const name = prompt("Name for the new boat:", "");
   if (!name) return;
-  p.name = name;
-  p.config.meta.boat = name;
+  let data;
+  if (active && confirm("OK = copy the current boat's tunes & rig config (log not copied).\nCancel = start from the reference grid.")) {
+    data = { config: clone(active.config), log: [] };
+  } else {
+    data = seedBoatData(name);
+  }
+  data.config.meta = data.config.meta || {};
+  data.config.meta.boat = name;
+  try {
+    const r = await apiSend("/api/boats", "POST", { name, data });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const b = await r.json();
+    await loadBoats(b.id);
+    renderAll();
+    toast("Created “" + name + "”");
+  } catch (e) { alert("Could not create boat: " + e.message); }
+}
+
+async function renameProfile() {
+  if (!active || active.role !== "owner") return;
+  const name = prompt("Rename boat:", active.name);
+  if (!name) return;
+  active.name = name;
+  active.config.meta = active.config.meta || {};
+  active.config.meta.boat = name;
+  const m = boats.find((b) => b.id === active.id); if (m) m.name = name;
   save();
   renderAll();
 }
 
-function deleteProfile() {
-  if (state.profiles.length <= 1) { alert("Can't delete the only profile. Create another first."); return; }
-  const p = activeProfile();
-  if (!confirm(`Delete profile “${p.name}” and its ${p.log.length} log entr${p.log.length === 1 ? "y" : "ies"}? This cannot be undone (export first to back up).`)) return;
-  state.profiles = state.profiles.filter((x) => x.id !== p.id);
-  state.activeProfileId = state.profiles[0].id;
-  save();
-  renderAll();
-  toast("Deleted");
+async function deleteProfile() {
+  if (!active || active.role !== "owner") return;
+  const n = active.log.length;
+  if (!confirm(`Delete boat “${active.name}” and its ${n} log entr${n === 1 ? "y" : "ies"}? This removes it for everyone it's shared with and cannot be undone (export first to back up).`)) return;
+  try {
+    const r = await apiSend("/api/boats/" + active.id, "DELETE");
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    try { localStorage.removeItem(boatCacheKey(active.id)); } catch (e) {}
+    activeBoatId = null; active = null;
+    await loadBoats();
+    renderAll();
+    toast("Deleted");
+  } catch (e) { alert("Could not delete: " + e.message); }
 }
 
 function exportProfile() {
-  const p = activeProfile();
-  const blob = new Blob([JSON.stringify(p, null, 2)], { type: "application/json" });
+  if (!active) return;
+  const out = { id: active.id, name: active.name, config: active.config, log: active.log };
+  const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  const safe = p.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+  const safe = active.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
   a.href = url;
   a.download = `ascow-tuning-${safe}.json`;
   a.click();
@@ -408,31 +388,94 @@ function exportProfile() {
 
 function importProfile(file) {
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
     try {
       const obj = JSON.parse(reader.result);
       const incoming = Array.isArray(obj) ? obj : (obj.profiles ? obj.profiles : [obj]);
-      let count = 0;
+      let last = null, count = 0;
       for (const raw of incoming) {
         if (!raw || !raw.config) continue;
-        const p = clone(raw);
-        p.id = uid();
-        p.log = Array.isArray(p.log) ? p.log : [];
-        if (state.profiles.some((x) => x.name === p.name)) p.name += " (imported)";
-        state.profiles.push(p);
-        state.activeProfileId = p.id;
-        count++;
+        const name = raw.name || raw.config?.meta?.boat || "Imported boat";
+        const data = { config: normalizeConfig(clone(raw.config)), log: Array.isArray(raw.log) ? raw.log : [] };
+        const r = await apiSend("/api/boats", "POST", { name, data });
+        if (r.ok) { last = (await r.json()).id; count++; }
       }
-      if (!count) { alert("No valid profiles found in that file."); return; }
-      normalizeState(state);
-      save();
+      if (!count) { alert("No valid boats found in that file."); return; }
+      await loadBoats(last);
       renderAll();
-      toast(`Imported ${count} profile${count > 1 ? "s" : ""}`);
+      toast(`Imported ${count} boat${count > 1 ? "s" : ""}`);
     } catch (e) {
       alert("Import failed: " + e.message);
     }
   };
   reader.readAsText(file);
+}
+
+/* ---------- sharing ---------- */
+async function openShare() {
+  if (!active) return;
+  $("#shareBoatName").textContent = active.name;
+  $("#shareModal").hidden = false;
+  await renderShare();
+}
+function closeShare() { $("#shareModal").hidden = true; }
+
+async function renderShare() {
+  const host = $("#shareBody");
+  host.innerHTML = "Loading…";
+  try {
+    const r = await apiGet("/api/boats/" + active.id + "/members");
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    const owner = j.role === "owner";
+    const members = j.members.map((m) => `
+      <li><span>${esc(m.email)} <span class="role">${m.role}</span></span>
+      ${owner && m.email !== j.you ? `<button class="sm danger" data-remove="${esc(m.email)}">Remove</button>` : ""}</li>`).join("");
+    const invites = j.invites.map((i) => `
+      <li class="pending"><span>${esc(i.email)} <span class="role">invited · ${i.role}</span></span>
+      ${owner ? `<button class="sm ghost" data-revoke="${esc(i.token)}">Revoke</button>` : ""}</li>`).join("");
+    host.innerHTML = `
+      <ul class="share-list">${members}${invites}</ul>
+      ${owner ? `<form id="inviteForm" class="share-invite">
+        <input type="email" id="inviteEmail" placeholder="crew@example.com" required />
+        <select id="inviteRole"><option value="editor">Editor</option><option value="owner">Owner</option></select>
+        <button class="primary" type="submit">Send invite</button>
+      </form>` : `<p class="hint">Only an owner can invite or remove crew.</p>`}`;
+  } catch (e) {
+    host.innerHTML = `<p class="hint">Couldn’t load sharing info.</p>`;
+  }
+}
+
+async function sendInvite() {
+  const email = $("#inviteEmail").value.trim();
+  const role = $("#inviteRole").value;
+  const r = await apiSend("/api/boats/" + active.id + "/invites", "POST", { email, role });
+  if (r.ok) { toast("Invite sent to " + email); await renderShare(); }
+  else { const j = await r.json().catch(() => ({})); alert("Invite failed: " + (j.error || r.status)); }
+}
+async function removeMember(email) {
+  if (!confirm("Remove " + email + " from this boat?")) return;
+  const r = await apiSend("/api/boats/" + active.id + "/members/" + encodeURIComponent(email), "DELETE");
+  if (r.ok) await renderShare(); else alert("Could not remove.");
+}
+async function revokeInvite(token) {
+  const r = await apiSend("/api/boats/" + active.id + "/invites/" + encodeURIComponent(token), "DELETE");
+  if (r.ok) await renderShare();
+}
+
+/* ---------- auth ---------- */
+async function requestLogin() {
+  const email = $("#loginEmail").value.trim();
+  if (!email) return;
+  await apiSend("/api/auth/request", "POST", { email }).catch(() => {});
+  $("#loginMsg").textContent = "If that email has access, a sign-in link is on its way. Check your inbox.";
+  $("#loginForm").reset();
+}
+function showLogin() { document.body.className = "logged-out"; }
+function showApp(email) {
+  document.body.className = "";
+  const el = $("#whoami");
+  if (el) { el.hidden = false; el.textContent = email; }
 }
 
 /* ============================================================
@@ -1513,8 +1556,8 @@ function setGauge(g) {
     const c = convertReading(old, g, WIRE_SIZE[wire], el.value.trim());
     el.value = c == null ? "" : c;
   }
-  state.gauge = g;
-  save();
+  gaugePref = g;
+  try { localStorage.setItem(GAUGE_KEY, g); } catch (e) {}
   applyGaugeLabels();
   renderAll();
   toast("Gauge: " + g);
@@ -1525,12 +1568,22 @@ function setGauge(g) {
    ============================================================ */
 function renderAll() {
   renderProfileSelect();
+  if (!active) { renderNoBoats(); return; }
   renderGrid();
   renderLogControls();
   renderLogList();
   renderAnalysis();
   renderReference();
   renderDiagram();
+}
+
+function renderNoBoats() {
+  $("#gridHost").innerHTML = '<p class="empty">No boats yet. Click “+ New boat” to create one, or accept an invite from a crewmate.</p>';
+  $("#setupTabs").innerHTML = "";
+  $("#setupNotes").innerHTML = "";
+  $("#logList").innerHTML = "";
+  $("#analysisHost").innerHTML = "";
+  $("#diagHost").innerHTML = "";
 }
 
 function switchView(name) {
@@ -1550,6 +1603,20 @@ function bindEvents() {
   $("#btnExport").addEventListener("click", exportProfile);
   $("#btnImport").addEventListener("click", () => $("#importFile").click());
   $("#importFile").addEventListener("change", (e) => { if (e.target.files[0]) { importProfile(e.target.files[0]); e.target.value = ""; } });
+  $("#btnLogout").addEventListener("click", async () => { await apiSend("/api/auth/logout", "POST").catch(() => {}); location.reload(); });
+
+  // sharing
+  $("#btnShare").addEventListener("click", openShare);
+  $("#shareClose").addEventListener("click", closeShare);
+  $("#shareModal").addEventListener("click", (e) => { if (e.target === $("#shareModal")) closeShare(); });
+  $("#shareBody").addEventListener("submit", (e) => { if (e.target.id === "inviteForm") { e.preventDefault(); sendInvite(); } });
+  $("#shareBody").addEventListener("click", (e) => {
+    if (e.target.dataset.remove) removeMember(e.target.dataset.remove);
+    else if (e.target.dataset.revoke) revokeInvite(e.target.dataset.revoke);
+  });
+
+  // login
+  $("#loginForm").addEventListener("submit", (e) => { e.preventDefault(); requestLogin(); });
 
   // grid: setup tabs + cell edits (event delegation)
   $("#setupTabs").addEventListener("click", (e) => {
@@ -1627,18 +1694,32 @@ function bindEvents() {
 }
 
 /* ---------- boot ---------- */
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   bindEvents();
   applyGaugeLabels();
-  renderAll();                 // instant render from localStorage
   $("#logDate").value = new Date().toISOString().slice(0, 10);
-  showIdentity();
-  pullFromServer().then((changed) => { if (changed) renderAll(); });
 
-  // pick up edits made on another device when returning to this tab
+  let me = null;
+  try { const r = await apiGet("/api/me"); if (r.ok) me = await r.json(); } catch (e) {}
+  if (!me) { showLogin(); return; }
+  showApp(me.email);
+
+  // ?boat=<id> arrives from an accepted invite link
+  const params = new URLSearchParams(location.search);
+  const boatParam = params.get("boat");
+  if (boatParam) {
+    try { localStorage.setItem(ACTIVE_BOAT_KEY, boatParam); } catch (e) {}
+    history.replaceState(null, "", location.pathname);
+  }
+
+  try { await loadBoats(boatParam || undefined); }
+  catch (e) { setSyncStatus("offline", "Couldn’t load boats from the server"); }
+  renderAll();
+
+  // pick up edits made by crew/other devices when returning to this tab
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && !editingLogId) {
-      pullFromServer().then((changed) => { if (changed) renderAll(); });
+    if (document.visibilityState === "visible" && !editingLogId && activeBoatId) {
+      selectBoat(activeBoatId).then(renderAll);
     }
   });
 });
