@@ -145,8 +145,10 @@ function flashSaved() {
 }
 
 // cache the active boat locally, then schedule a debounced server save
+function canEdit() { return !!active && active.role !== "viewer"; }
+
 function save() {
-  if (!active) return;
+  if (!active || !canEdit()) return;
   try {
     localStorage.setItem(boatCacheKey(active.id), JSON.stringify({
       id: active.id, name: active.name, role: active.role, rev: active.rev,
@@ -269,11 +271,16 @@ function renderProfileSelect() {
     .map((b) => `<option value="${b.id}" ${b.id === activeBoatId ? "selected" : ""}>${esc(b.name)}</option>`)
     .join("");
   const owner = !!active && active.role === "owner";
-  const rn = $("#btnRenameProfile"), del = $("#btnDeleteProfile"), share = $("#btnShare"), exp = $("#btnExport");
+  const viewer = !!active && active.role === "viewer";
+  const rn = $("#btnRenameProfile"), del = $("#btnDeleteProfile"), share = $("#btnShare"), exp = $("#btnExport"), imp = $("#btnImport");
   if (rn) rn.disabled = !owner;
   if (del) del.disabled = !owner;
   if (exp) exp.disabled = !active;
+  if (imp) imp.disabled = viewer;          // import overwrites the boat — editors/owners only
   if (share) share.hidden = !active;
+  document.body.classList.toggle("role-viewer", viewer);
+  const badge = $("#roleBadge");
+  if (badge) badge.hidden = !viewer;
 }
 
 function applyBoatData(meta, data) {
@@ -387,6 +394,7 @@ function exportProfile() {
 }
 
 function importProfile(file) {
+  if (!canEdit()) return;
   const reader = new FileReader();
   reader.onload = async () => {
     try {
@@ -438,7 +446,7 @@ async function renderShare() {
       <ul class="share-list">${members}${invites}</ul>
       ${owner ? `<form id="inviteForm" class="share-invite">
         <input type="email" id="inviteEmail" placeholder="crew@example.com" required />
-        <select id="inviteRole"><option value="editor">Editor</option><option value="owner">Owner</option></select>
+        <select id="inviteRole"><option value="viewer">Viewer (read-only)</option><option value="editor" selected>Editor</option><option value="owner">Owner</option></select>
         <button class="primary" type="submit">Send invite</button>
       </form>` : `<p class="hint">Only an owner can invite or remove crew.</p>`}`;
   } catch (e) {
@@ -618,6 +626,7 @@ function renderSetupNotes(setup) {
 }
 
 function addSetup() {
+  if (!canEdit()) return;
   const label = prompt("Name for the new tune (e.g. a sailor or a season):", "");
   if (!label) return;
   const cfg = activeProfile().config;
@@ -637,6 +646,7 @@ function addSetup() {
 }
 
 function renameSetup() {
+  if (!canEdit()) return;
   const cfg = activeProfile().config;
   const setup = cfg.setups.find((s) => s.id === activeSetupId);
   if (!setup) return;
@@ -652,6 +662,7 @@ function renameSetup() {
 }
 
 function duplicateSetup() {
+  if (!canEdit()) return;
   const cfg = activeProfile().config;
   const setup = cfg.setups.find((s) => s.id === activeSetupId);
   if (!setup) return;
@@ -696,6 +707,7 @@ function renderLogControls() {
 }
 
 function prefillFromSetup() {
+  if (!canEdit()) return;
   const v = $("#logPrefill").value;
   if (!v) return;
   const [sid, rid] = v.split("::");
@@ -764,6 +776,7 @@ function collectLogForm() {
 
 function submitLog(e) {
   e.preventDefault();
+  if (!canEdit()) return;
   const p = activeProfile();
   const entry = collectLogForm();
   if (!entry.date) { alert("Date is required."); return; }

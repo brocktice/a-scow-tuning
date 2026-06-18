@@ -164,6 +164,7 @@ app.get("/api/boats/:id", requireUser, requireMember, (req, res) => {
 });
 
 app.put("/api/boats/:id", requireUser, requireMember, (req, res) => {
+  if (req.member.role === "viewer") return res.status(403).json({ error: "view only" });
   const b = db.prepare("SELECT rev FROM boats WHERE id = ?").get(req.params.id);
   const baseRev = req.body?.rev;
   if (baseRev != null && baseRev !== b.rev) {
@@ -202,7 +203,7 @@ app.get("/api/boats/:id/members", requireUser, requireMember, (req, res) => {
 app.post("/api/boats/:id/invites", requireUser, requireMember, (req, res) => {
   if (req.member.role !== "owner") return res.status(403).json({ error: "owner only" });
   const email = normalizeEmail(req.body?.email);
-  const role = req.body?.role === "owner" ? "owner" : "editor";
+  const role = ["owner", "editor", "viewer"].includes(req.body?.role) ? req.body.role : "editor";
   if (!isEmail(email)) return res.status(400).json({ error: "invalid email" });
   const existing = db.prepare(
     `SELECT 1 FROM boat_members m JOIN users u ON u.id = m.user_id WHERE m.boat_id = ? AND u.email = ?`

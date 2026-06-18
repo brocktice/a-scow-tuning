@@ -519,3 +519,24 @@ body.logged-out #loginScreen { display: flex; }
 .share-invite { display: flex; gap: 8px; align-items: center; }
 .share-invite input[type="email"] { flex: 1; padding: 8px 10px; }
 .share-invite select { padding: 8px; }
+
+/* ---- view-only (viewer) role ---- */
+.role-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px;
+  background: #fef3c7; color: #92400e; border: 1px solid #fcd34d;
+}
+/* hide editing-only controls when the active boat is read-only */
+body.role-viewer #btnAddSetup,
+body.role-viewer #setupTabs .tab-actions,
+body.role-viewer #btnAddNote,
+body.role-viewer #btnDelSetup,
+body.role-viewer #btnPrefill,
+body.role-viewer #logForm,
+body.role-viewer #setupNotes [data-delnote],
+body.role-viewer #logList [data-editlog],
+body.role-viewer #logList [data-dellog] { display: none !important; }
+/* grid cells become non-editable, visibly inert */
+body.role-viewer #gridHost input {
+  pointer-events: none; background: #f1f3f5; color: #475569; border-color: #e2e8f0;
+}
