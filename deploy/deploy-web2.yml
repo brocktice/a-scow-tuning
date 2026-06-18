@@ -1,0 +1,119 @@
+---
+# Deploy the A Scow Tuner (Node + SQLite + Caddy) Docker stack on web2.
+#
+#   ansible-playbook -i deploy/inventory.yml deploy/deploy-web2.yml
+#
+# Prerequisites (see DEPLOY-web2.md):
+#   - /home/brock/src/a-scow-tuning/.env exists on web2 (copied from .env.example,
+#     SMTP_PASS + ADMIN_EMAILS filled in). This playbook refuses to deploy without it.
+#   - DNS (atuner.anfani.com CNAME) + haproxy routes are in place BEFORE Caddy can
+#     obtain a Let's Encrypt cert. The health check below hits the node container
+#     directly so it works even pre-cutover.
+- name: Deploy A Scow Tuner Docker stack on web2
+  hosts: web2
+  gather_facts: false
+  vars:
+    atuner_dir: /home/brock/src/a-scow-tuning
+    atuner_artifact_local: /tmp/atuner-deploy.tar.gz
+    atuner_artifact_remote: /tmp/atuner-deploy.tar.gz
+  tasks:
+    - name: Build deploy artifact locally
+      ansible.builtin.command:
+        argv:
+          - tar
+          - --exclude=.git
+          - --exclude=.env
+          - --exclude=node_modules
+          - --exclude=data
+          - -czf
+          - "{{ atuner_artifact_local }}"
+          - Dockerfile
+          - compose.yaml
+          - Caddyfile
+          - .dockerignore
+          - .env.example
+          - package.json
+          - server
+          - index.html
+          - app.js
+          - convert.js
+          - data.js
+          - styles.css
+      args:
+        chdir: "{{ playbook_dir }}/.."
+      delegate_to: localhost
+      changed_when: true
+
+    - name: Ensure deployment directory exists
+      ansible.builtin.file:
+        path: "{{ atuner_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Copy deploy artifact to web2
+      ansible.builtin.copy:
+        src: "{{ atuner_artifact_local }}"
+        dest: "{{ atuner_artifact_remote }}"
+        mode: "0644"
+
+    - name: Extract deploy artifact
+      ansible.builtin.unarchive:
+        src: "{{ atuner_artifact_remote }}"
+        dest: "{{ atuner_dir }}"
+        remote_src: true
+
+    - name: Require existing runtime .env
+      ansible.builtin.stat:
+        path: "{{ atuner_dir }}/.env"
+      register: atuner_env
+
+    - name: Stop before deploying without secrets
+      ansible.builtin.fail:
+        msg: >-
+          {{ atuner_dir }}/.env is missing on web2. Copy .env.example to .env and set
+          SMTP_PASS (Stalwart atuner@anfani.com), ADMIN_EMAILS, and ACME_EMAIL before
+          rerunning this playbook.
+      when: not atuner_env.stat.exists
+
+    - name: Build and start the stack
+      ansible.builtin.command:
+        argv:
+          - docker
+          - compose
+          - up
+          - -d
+          - --build
+      args:
+        chdir: "{{ atuner_dir }}"
+      register: atuner_compose
+      changed_when: >-
+        'Recreated' in (atuner_compose.stdout + atuner_compose.stderr)
+        or 'Started' in (atuner_compose.stdout + atuner_compose.stderr)
+        or 'Built' in (atuner_compose.stdout + atuner_compose.stderr)
+
+    - name: Wait for the app health endpoint (inside the node container, pre-TLS)
+      ansible.builtin.command:
+        argv:
+          - docker
+          - compose
+          - exec
+          - -T
+          - atuner
+          - node
+          - -e
+          - >-
+            fetch('http://localhost:8790/api/health')
+            .then(r => r.json())
+            .then(j => { console.log(JSON.stringify(j)); process.exit(j.ok ? 0 : 1); })
+            .catch(e => { console.error(e.message); process.exit(1); })
+      args:
+        chdir: "{{ atuner_dir }}"
+      register: atuner_health
+      retries: 15
+      delay: 2
+      until: atuner_health.rc == 0
+      changed_when: false
+
+    - name: Show deployment health
+      ansible.builtin.debug:
+        msg: "{{ atuner_health.stdout }}"
