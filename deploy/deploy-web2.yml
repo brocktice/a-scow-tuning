@@ -12,6 +12,7 @@
 - name: Deploy A Scow Tuner Docker stack on web2
   hosts: web2
   gather_facts: false
+  become: false  # everything runs as the deploy user (brock, in the docker group)
   vars:
     atuner_dir: /home/brock/src/a-scow-tuning
     atuner_artifact_local: /tmp/atuner-deploy.tar.gz
