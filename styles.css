@@ -1,3 +1,6 @@
+/* the hidden attribute must win over any element/class display rule */
+[hidden] { display: none !important; }
+
 :root {
   --bg: #0e1726;
   --panel: #16223a;
