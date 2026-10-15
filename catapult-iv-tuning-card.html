@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Catapult IV — Rig Tuning Card</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0c2233;
+    --navy-2:#143850;
+    --ink:#11212f;
+    --paper:#f5f6f4;
+    --paper-edge:#e7e9e4;
+    --muted:#5c6b76;
+    --yellow:#f1c000;   /* light air  0-6   */
+    --blue:#1f6fb2;     /* medium air 6-18  */
+    --red:#cf3a32;      /* heavy air  18-25 */
+    --hair:#c9cfca;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    background:
+      radial-gradient(120% 80% at 50% -10%, var(--navy-2) 0%, var(--navy) 55%, #081826 100%);
+    min-height:100vh;
+    font-family:"Inter",system-ui,sans-serif;
+    color:var(--ink);
+    padding:32px 16px 56px;
+    display:flex;
+    justify-content:center;
+    -webkit-font-smoothing:antialiased;
+  }
+  .card{
+    width:100%;
+    max-width:880px;
+    background:var(--paper);
+    border:1px solid var(--paper-edge);
+    border-radius:6px;
+    box-shadow:0 24px 60px -20px rgba(0,0,0,.55);
+    overflow:hidden;
+  }
+
+  /* ---- header ---- */
+  header{
+    background:var(--navy);
+    color:#eef3f6;
+    padding:20px 26px 18px;
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:16px;
+    border-bottom:3px solid var(--yellow);
+  }
+  .eyebrow{
+    font-family:"Oswald",sans-serif;
+    text-transform:uppercase;
+    letter-spacing:.32em;
+    font-size:11px;
+    font-weight:500;
+    color:#9fb6c6;
+    margin:0 0 4px;
+  }
+  h1{
+    font-family:"Oswald",sans-serif;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    font-size:34px;
+    line-height:.95;
+    margin:0;
+  }
+  .src{
+    text-align:right;
+    font-size:12px;
+    color:#9fb6c6;
+    line-height:1.5;
+    white-space:nowrap;
+  }
+  .src b{color:#eef3f6;font-weight:600;}
+
+  /* ---- generic table shell ---- */
+  .wrap{padding:22px 26px 8px;}
+  .section-label{
+    font-family:"Oswald",sans-serif;
+    text-transform:uppercase;
+    letter-spacing:.18em;
+    font-size:12px;
+    font-weight:600;
+    color:var(--navy);
+    margin:18px 0 8px;
+    display:flex;align-items:center;gap:10px;
+  }
+  .section-label::after{content:"";flex:1;height:1px;background:var(--hair);}
+  .section-label:first-child{margin-top:0;}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{padding:7px 10px;text-align:left;}
+  thead th{
+    font-family:"Oswald",sans-serif;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    font-size:11px;
+    font-weight:600;
+    color:var(--navy);
+    border-bottom:2px solid var(--navy);
+  }
+  .boatcol{text-align:right;}
+  .rowlabel{
+    font-weight:600;color:var(--ink);white-space:nowrap;
+  }
+  .num{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-variant-numeric:tabular-nums;
+    text-align:right;
+    white-space:nowrap;
+    color:var(--ink);
+  }
+  .num .g{color:var(--muted);font-size:11px;}
+  .num .d{color:var(--blue);font-weight:600;}
+
+  /* base table */
+  .base td,.base th{border-bottom:1px solid var(--paper-edge);}
+  .base tr:last-child td{border-bottom:none;}
+
+  /* north sails reference table */
+  .ns td,.ns th{border-bottom:1px solid var(--paper-edge);}
+  .ns tr:last-child td{border-bottom:none;}
+  .ns .hl td{background:#eaf2f8;}
+  .ns .hl .rowlabel{color:var(--blue);}
+  .ns thead th.boatcol{text-align:right;}
+  .caption{font-size:11.5px;color:var(--muted);line-height:1.5;margin:8px 0 2px;}
+  .caption b{color:var(--ink);font-weight:600;}
+
+  /* ---- matrix ---- */
+  .matrix td{border-bottom:1px solid var(--paper-edge);vertical-align:middle;}
+  .matrix .grp td{border-top:2px solid var(--hair);}
+  .matrix tr:last-child td{border-bottom:none;}
+  .range{
+    font-family:"Oswald",sans-serif;
+    font-weight:600;
+    color:#fff;
+    text-align:center;
+    width:64px;
+    line-height:1.15;
+    vertical-align:middle;
+  }
+  .range small{display:block;font-size:9px;letter-spacing:.14em;font-weight:500;opacity:.85;text-transform:uppercase;}
+  .r-light{background:var(--yellow);color:var(--ink);}
+  .r-med{background:var(--blue);}
+  .r-heavy{background:var(--red);}
+
+  /* ---- legend + notes ---- */
+  .foot{padding:6px 26px 24px;}
+  .legend{
+    display:flex;flex-wrap:wrap;gap:6px 20px;
+    font-size:11.5px;color:var(--muted);
+    padding:12px 0 4px;border-top:1px solid var(--hair);margin-top:6px;
+  }
+  .legend b{color:var(--ink);font-weight:600;}
+  .chip{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px;}
+
+  .notes{margin-top:14px;}
+  .notes h3{
+    font-family:"Oswald",sans-serif;text-transform:uppercase;letter-spacing:.16em;
+    font-size:11px;color:var(--navy);margin:0 0 8px;
+  }
+  .notes ul{margin:0;padding-left:18px;}
+  .notes li{font-size:12.5px;line-height:1.5;margin-bottom:4px;color:var(--ink);}
+  .notes li b{font-weight:600;}
+
+  .hullnote{
+    margin-top:14px;background:#eef2f0;border-left:3px solid var(--navy);
+    padding:10px 14px;font-size:12px;line-height:1.5;color:var(--ink);border-radius:0 4px 4px 0;
+  }
+  .hullnote b{font-weight:600;}
+
+  /* rig setup callout (pre-bend / intermediates) */
+  .setup{
+    display:flex;gap:14px;align-items:flex-start;
+    margin:0 0 18px;padding:13px 16px;
+    background:var(--navy);color:#eef3f6;border-radius:5px;
+  }
+  .setup .tag{
+    font-family:"Oswald",sans-serif;text-transform:uppercase;letter-spacing:.13em;
+    font-size:10px;font-weight:600;background:var(--yellow);color:var(--ink);
+    padding:5px 9px;border-radius:3px;white-space:nowrap;margin-top:1px;
+  }
+  .setup .sbody{font-size:12.5px;line-height:1.55;}
+  .setup .sbody b{color:#fff;font-weight:600;}
+  .setup .sbody .val{font-family:"IBM Plex Mono",ui-monospace,monospace;color:var(--yellow);font-weight:600;}
+  .setup .sbody .q{color:#9fb6c6;}
+
+  /* terminology note */
+  .terminote{
+    margin-top:10px;background:#f1efe8;border-left:3px solid var(--muted);
+    padding:10px 14px;font-size:11.5px;line-height:1.5;color:var(--ink);border-radius:0 4px 4px 0;
+  }
+  .terminote b{font-weight:600;}
+
+  .printbtn{
+    position:fixed;top:18px;right:18px;
+    font-family:"Oswald",sans-serif;text-transform:uppercase;letter-spacing:.12em;
+    font-size:12px;font-weight:600;
+    background:var(--yellow);color:var(--ink);border:none;border-radius:4px;
+    padding:9px 16px;cursor:pointer;box-shadow:0 6px 16px -6px rgba(0,0,0,.5);
+  }
+  .printbtn:hover{filter:brightness(1.05);}
+  .printbtn:focus-visible{outline:2px solid #fff;outline-offset:2px;}
+
+  @media (max-width:560px){
+    h1{font-size:26px;}
+    .wrap,.foot{padding-left:16px;padding-right:16px;}
+    header{padding:16px;}
+    th,td{padding:6px 7px;}
+    .num{font-size:12px;}
+  }
+  @media print{
+    body{background:#fff;padding:0;}
+    .card{box-shadow:none;border:none;max-width:none;}
+    .printbtn{display:none;}
+  }
+</style>
+</head>
+<body>
+  <button class="printbtn" onclick="window.print()">Print</button>
+  <div class="card">
+    <header>
+      <div>
+        <p class="eyebrow">A Scow · Swept Rig</p>
+        <h1>Catapult IV</h1>
+      </div>
+      <div class="src">
+        Source: <b>Louis Hill</b><br>
+        Dated <b>6/8/08</b><br>
+        Tensions in lbs (Loos&nbsp;A)
+      </div>
+    </header>
+
+    <div class="wrap">
+      <!-- RIG SETUP: pre-bend -->
+      <div class="setup">
+        <span class="tag">Pre-bend</span>
+        <div class="sbody">
+          <b>Pre-bend — “intermediates” / diamonds:</b> measured with a string down the back of the tunnel, read at the spar midpoint. It works with the wind — more bend as it builds, to flatten the main and depower: <span class="val">≈4–4.5″</span> light · <span class="val">≈5″</span> all-purpose · <span class="val">5–5.5″</span> heavy. Some skippers move it with the breeze; others set one number and leave it. <span class="q">(Values are North's reference — swap in Louis's targets and note whether he adjusts or fixes it.)</span>
+        </div>
+      </div>
+
+      <!-- BASE -->
+      <div class="section-label">Base Setting &nbsp;<span style="font-weight:500;letter-spacing:.04em;color:var(--muted);font-size:11px;">(0–12 kn rest setup)</span></div>
+      <table class="base">
+        <thead>
+          <tr>
+            <th>Setting</th>
+            <th class="boatcol">Andy</th>
+            <th class="boatcol">Buddy</th>
+            <th class="boatcol">C4</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="rowlabel">Uppers</td>
+            <td class="num">300 <span class="g">(37)</span></td>
+            <td class="num">450 <span class="g">(42)</span></td>
+            <td class="num">300 <span class="g">(37)</span></td>
+          </tr>
+          <tr>
+            <td class="rowlabel">Lowers</td>
+            <td class="num">Hand tight</td>
+            <td class="num">200 <span class="g">(32)</span></td>
+            <td class="num">Hand tight</td>
+          </tr>
+          <tr>
+            <td class="rowlabel">Forestay</td>
+            <td class="num">16″</td>
+            <td class="num">16″</td>
+            <td class="num">16″</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- MATRIX -->
+      <div class="section-label">By Wind Range &nbsp;<span style="font-weight:500;letter-spacing:.04em;color:var(--muted);font-size:11px;">(adjust from base)</span></div>
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th colspan="2">Range · Tune</th>
+            <th class="boatcol">Andy</th>
+            <th class="boatcol">Buddy</th>
+            <th class="boatcol">C4</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- 0-6 -->
+          <tr class="grp">
+            <td class="range r-light" rowspan="3">0–6<small>Light</small></td>
+            <td class="rowlabel">Uppers</td>
+            <td class="num">300 <span class="g">(37)</span></td>
+            <td class="num">450 <span class="g">(42)</span></td>
+            <td class="num">300 <span class="g">(37)</span></td>
+          </tr>
+          <tr>
+            <td class="rowlabel">Lowers</td>
+            <td class="num">200 <span class="g">(32)</span></td>
+            <td class="num">200 <span class="g">(32)</span></td>
+            <td class="num">200 <span class="g">(32)</span></td>
+          </tr>
+          <tr>
+            <td class="rowlabel">Forestay</td>
+            <td class="num">15½″</td>
+            <td class="num">16″</td>
+            <td class="num">15½″</td>
+          </tr>
+
+          <!-- 6-12 -->
+          <tr class="grp">
+            <td class="range r-med" rowspan="3">6–12<small>Medium</small></td>
+            <td class="rowlabel">Uppers</td>
+            <td class="num">= base</td>
+            <td class="num">= base</td>
+            <td class="num"><span class="d">+3</span> 360 <span class="g">(40)</span></td>
+          </tr>
+          <tr>
+            <td class="rowlabel">Lowers</td>
+            <td class="num">= base</td>
+            <td class="num">= base</td>
+            <td class="num"><span class="d">+2</span> 360 <span class="g">(40)</span></td>
+          </tr>
+          <tr>
+            <td class="rowlabel">Forestay</td>
+            <td class="num">16″</td>
+            <td class="num">16″</td>
+            <td class="num">16″</td>
+          </tr>
+
+          <!-- 12-18 -->
+          <tr class="grp">
+            <td class="range r-med" rowspan="3">12–18<small>Medium</small></td>
+            <td class="rowlabel">Uppers</td>
+            <td class="num"><span class="d">+6</span> 500 <span class="g">(43)</span></td>
+            <td class="num"><span class="d">+6</span> 600 <span class="g">(45)</span></td>
+            <td class="num"><span class="d">+5</span> 520 <span class="g">(44)</span></td>
+          </tr>
+          <tr>
+            <td class="rowlabel">Lowers</td>
+            <td class="num"><span class="d">+6</span> 300 <span class="g">(35)</span></td>
+            <td class="num"><span class="d">+6</span> 500 <span class="g">(43)</span></td>
+            <td class="num"><span class="d">+5</span> 520 <span class="g">(44)</span></td>
+          </tr>
+          <tr>
+            <td class="rowlabel">Forestay</td>
+            <td class="num">17″</td>
+            <td class="num">16″</td>
+            <td class="num">16″</td>
+          </tr>
+
+          <!-- 18-25 -->
+          <tr class="grp">
+            <td class="range r-heavy" rowspan="3">18–25<small>Heavy</small></td>
+            <td class="rowlabel">Uppers</td>
+            <td class="num"><span class="d">+10</span> 600 <span class="g">(45)</span></td>
+            <td class="num"><span class="d">+12</span> 1000 <span class="g">(49)</span></td>
+            <td class="num"><span class="d">+11</span> 700 <span class="g">(46)</span></td>
+          </tr>
+          <tr>
+            <td class="rowlabel">Lowers</td>
+            <td class="num"><span class="d">+10</span> 520 <span class="g">(43)</span></td>
+            <td class="num"><span class="d">+9</span> 600 <span class="g">(45)</span></td>
+            <td class="num"><span class="d">+10</span> 700 <span class="g">(46)</span></td>
+          </tr>
+          <tr>
+            <td class="rowlabel">Forestay</td>
+            <td class="num">17″</td>
+            <td class="num">16″</td>
+            <td class="num">17″</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="foot">
+      <div class="legend">
+        <span><b>(nn)</b> = Loos Model A gauge reading</span>
+        <span><b style="color:var(--blue)">+n</b> = turns from base → resulting lbs</span>
+        <span><b>Forestay</b> = inches from deck plate (rake)</span>
+        <span><span class="chip" style="background:var(--yellow)"></span>Yellow&nbsp;tape</span>
+        <span><span class="chip" style="background:var(--blue)"></span>Blue&nbsp;tape</span>
+        <span><span class="chip" style="background:var(--red)"></span>Red&nbsp;tape</span>
+      </div>
+
+      <div class="notes">
+        <h3>On-the-water notes</h3>
+        <ul>
+          <li><b>Buddy:</b> too much mast bend above 18 kn — tighten lowers 2 turns.</li>
+          <li><b>Andy:</b> main traveler up 3″ in 0–6, main eased for twist. Keep traveler centered until everyone's on the rail.</li>
+          <li><b>Depowering priority:</b> 1) vang, 2) fine tune, 3) traveler down. Return to base at the end of the racing day.</li>
+        </ul>
+      </div>
+
+      <div class="hullnote">
+        <b>Hull quirk (per L. Hill):</b> legacy A Scow molds run ~<b>5⁄8″ higher to starboard</b>, so a symmetric rig needs uneven port/stbd turnbuckle counts by design. Set tension to a <b>centered masthead</b> — lock the main halyard, swing the tape to the same point each side — rather than to matched numbers, then record the offset.
+      </div>
+
+      <div class="terminote">
+        <b>Terminology (fleet convention):</b> <b>uppers</b> run masthead → chainplate and <b>lowers</b> below the spreaders → chainplate — both Loos-tensioned and adjusted by wind (the tables above). The <b>intermediates</b> are the pre-bend / diamond wire up top. Heads-up: the North Sails A Scow guide swaps these labels — it calls the pre-bend wire the “uppers” and a chainplate wire the “intermediates” — so don't cross-wire the two if you read it alongside this card.
+      </div>
+    </div>
+  </div>
+</body>
+</html>
